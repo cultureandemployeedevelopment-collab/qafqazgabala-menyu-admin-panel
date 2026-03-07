@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f5f5f0; }
         .sidebar-gradient { background: linear-gradient(180deg, #0a1f0a 0%, #051005 100%); }
@@ -37,7 +37,7 @@
         .drag-area.dragover { border-color: #059669; background-color: #ecfdf5; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 16px; max-width: 900px; width: 92%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 16px; max-width: 950px; width: 92%; max-height: 90vh; overflow-y: auto; }
         .translate-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .qr-code-container { display: flex; justify-content: center; padding: 20px; background: white; border-radius: 12px; }
         .table-card { transition: all 0.3s; }
@@ -57,11 +57,8 @@
         .product-image-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; }
         .logo-preview { width: 150px; height: 150px; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; }
         .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
-        .gradient-text { background: linear-gradient(135deg, #059669 0%, #0d9488 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        @media (max-width: 768px) {
-            .specs-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 768px) { .specs-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -408,6 +405,58 @@
 
                         <div class="bg-white rounded-2xl p-6 shadow-sm">
                             <div class="flex items-center gap-2 mb-6">
+                                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-image text-emerald-600"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-800">Başlanğıc Hero Şəkli</h4>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero başlıq (AZ)</label>
+                                    <input type="text" id="hero-title-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero title (EN)</label>
+                                    <input type="text" id="hero-title-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero şəkli</label>
+                                    <div class="space-y-3">
+                                        <div id="hero-image-preview-wrap" class="w-full h-44 rounded-xl border border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center">
+                                            <img id="hero-image-preview" src="" class="w-full h-full object-cover hidden">
+                                            <div id="hero-image-placeholder" class="text-gray-400 text-sm text-center">
+                                                <i class="fas fa-image text-2xl mb-2"></i>
+                                                <div>Hero image əlavə edin</div>
+                                            </div>
+                                        </div>
+
+                                        <input type="file" id="hero-image-input" class="hidden" accept="image/*" onchange="handleHeroImageUpload(this)">
+                                        <div class="flex gap-2">
+                                            <button type="button" onclick="document.getElementById('hero-image-input').click()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
+                                                <i class="fas fa-upload mr-2"></i>Şəkil Seç
+                                            </button>
+                                            <button type="button" onclick="removeHeroImage()" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+                                                <i class="fas fa-trash mr-2"></i>Sil
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-800">Ağıllı Axtarış Badge</p>
+                                        <p class="text-xs text-gray-500">Müştəri smart axtarış olduğunu görsün</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="smart-search-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 shadow-sm">
+                            <div class="flex items-center gap-2 mb-6">
                                 <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
                                     <i class="fas fa-store text-gray-600"></i>
                                 </div>
@@ -542,53 +591,25 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Yeməyin adı (AZ) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="prod-name-az"
-                        oninput="handleProductFieldInput('name','az', this.value)"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg"
-                        placeholder="Məsələn: Lülə kabab"
-                    >
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (AZ) <span class="text-red-500">*</span></label>
+                    <input type="text" id="prod-name-az" oninput="handleProductFieldInput('name','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Məsələn: Lülə kabab">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Product name (EN) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="prod-name-en"
-                        oninput="handleProductFieldInput('name','en', this.value)"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg"
-                        placeholder="Example: Lyulya kebab"
-                    >
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product name (EN) <span class="text-red-500">*</span></label>
+                    <input type="text" id="prod-name-en" oninput="handleProductFieldInput('name','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Example: Lyulya kebab">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (AZ)</label>
-                    <textarea
-                        id="prod-desc-az"
-                        rows="4"
-                        oninput="handleProductFieldInput('desc','az', this.value)"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm"
-                        placeholder="Yeməyin tərkibi və xüsusiyyətləri..."
-                    ></textarea>
+                    <textarea id="prod-desc-az" rows="4" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Yeməyin tərkibi və xüsusiyyətləri..."></textarea>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Description (EN)</label>
-                    <textarea
-                        id="prod-desc-en"
-                        rows="4"
-                        oninput="handleProductFieldInput('desc','en', this.value)"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm"
-                        placeholder="Ingredients and description..."
-                    ></textarea>
+                    <textarea id="prod-desc-en" rows="4" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Ingredients and description..."></textarea>
                 </div>
             </div>
 
@@ -631,7 +652,7 @@
                 <div id="image-preview" class="image-gallery mt-4"></div>
             </div>
 
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-6 flex-wrap">
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
                     <span class="text-sm text-gray-700">Populyar</span>
@@ -639,6 +660,10 @@
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
                     <span class="text-sm text-gray-700">Yeni</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="prod-recommended" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
+                    <span class="text-sm text-gray-700">Tövsiyə olunan</span>
                 </label>
             </div>
         </div>
@@ -814,18 +839,12 @@
 </div>
 
 <script>
-// ============================================
-// CONFIGURATION
-// ============================================
 const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxJWy0E1FVY4_3lOPav_by9vt9cIC2Xzj2qvCfr6bspkGYZgA4KU4oCPIC3DkDsT3Lk_Q/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbx5QW5p7ZZ8ehbBjFe4Z5NOI0UiZuWxyQFSwNECo4xc_R7Jzb5ozzSCcRJmCANh3lxjZA/exec',
     AUTO_SYNC: true,
     SYNC_DELAY: 2000
 };
 
-// ============================================
-// DATA STORAGE
-// ============================================
 let categories = JSON.parse(localStorage.getItem('categories')) || [];
 let products = JSON.parse(localStorage.getItem('products')) || [];
 let orders = JSON.parse(localStorage.getItem('orders')) || [];
@@ -840,14 +859,12 @@ let editingTableId = null;
 let currentQRTable = null;
 let syncTimeout = null;
 let currentLogo = null;
+let currentHeroImage = null;
 
 let productTranslateTimer = null;
 let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
 
-// ============================================
-// UTILS
-// ============================================
 function escapeHtml(value = '') {
     return String(value)
         .replaceAll('&', '&amp;')
@@ -857,20 +874,13 @@ function escapeHtml(value = '') {
         .replaceAll("'", '&#039;');
 }
 
-// ============================================
-// TRANSLATION FUNCTIONS
-// ============================================
 async function translateViaAppsScript(text, source, target) {
     if (!text || !text.trim()) return '';
-
     try {
         const url = `${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`;
         const response = await fetch(url);
         const data = await response.json();
-
-        if (data.success) {
-            return data.translated || '';
-        }
+        if (data.success) return data.translated || '';
         return '';
     } catch (error) {
         console.error('Translation error:', error);
@@ -909,9 +919,7 @@ function handleProductFieldInput(fieldType, lang, value) {
 
         isProductAutoTranslating = true;
         const translatedText = await translateViaAppsScript(cleanValue, sourceLang, targetLang);
-        if (translatedText) {
-            targetElement.value = translatedText;
-        }
+        if (translatedText) targetElement.value = translatedText;
         isProductAutoTranslating = false;
     }, 500);
 }
@@ -919,7 +927,6 @@ function handleProductFieldInput(fieldType, lang, value) {
 function translateCategoryName() {
     const azText = document.getElementById('cat-name-az').value.trim();
     const box = document.getElementById('cat-translation-box');
-
     clearTimeout(categoryTranslateTimer);
 
     if (!azText) {
@@ -938,9 +945,6 @@ function translateCategoryName() {
     }, 400);
 }
 
-// ============================================
-// AVAILABILITY TOGGLE
-// ============================================
 document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'prod-available') {
         const label = document.getElementById('availability-label');
@@ -956,9 +960,6 @@ document.addEventListener('change', function(e) {
     }
 });
 
-// ============================================
-// SYNC FUNCTIONS
-// ============================================
 function debouncedSync() {
     if (!CONFIG.AUTO_SYNC) return;
     clearTimeout(syncTimeout);
@@ -968,21 +969,11 @@ function debouncedSync() {
 }
 
 async function syncToGoogleSheets() {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
-        console.log('GAS_URL konfiqurasiya edilməyib');
-        return;
-    }
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) return;
 
     showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
-    const data = {
-        categories,
-        products,
-        orders,
-        tables,
-        reservations,
-        settings
-    };
+    const data = { categories, products, orders, tables, reservations, settings };
 
     try {
         await fetch(CONFIG.GAS_URL, {
@@ -1020,13 +1011,8 @@ function showSyncBadge() {
     setTimeout(() => badge.classList.add('hidden'), 3000);
 }
 
-// ============================================
-// IMAGE UPLOAD
-// ============================================
 async function uploadImageToDrive(base64Image, fileName) {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
-        return null;
-    }
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) return null;
 
     try {
         showSyncIndicator('Şəkil yüklənir...', 'loading');
@@ -1059,9 +1045,6 @@ async function uploadImageToDrive(base64Image, fileName) {
     }
 }
 
-// ============================================
-// LOGIN
-// ============================================
 function togglePassword() {
     const input = document.getElementById('password');
     const icon = document.getElementById('eye-icon');
@@ -1097,9 +1080,6 @@ function logout() {
     document.getElementById('login-error').classList.add('hidden');
 }
 
-// ============================================
-// NAVIGATION
-// ============================================
 function showPage(pageName) {
     document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
     const selectedPage = document.getElementById('page-' + pageName);
@@ -1148,9 +1128,6 @@ function showPage(pageName) {
     }
 }
 
-// ============================================
-// PRODUCT FUNCTIONS
-// ============================================
 function openProductModal(productId = null) {
     editingProductId = productId;
     currentProductImages = [];
@@ -1167,6 +1144,7 @@ function openProductModal(productId = null) {
     document.getElementById('prod-vat').value = '';
     document.getElementById('prod-popular').checked = false;
     document.getElementById('prod-new').checked = false;
+    document.getElementById('prod-recommended').checked = false;
     document.getElementById('prod-available').checked = true;
     document.getElementById('availability-label').textContent = 'Mövcuddur';
     document.getElementById('availability-label').classList.remove('text-red-600');
@@ -1193,6 +1171,7 @@ function openProductModal(productId = null) {
             document.getElementById('prod-vat').value = product.vat || '';
             document.getElementById('prod-popular').checked = product.popular || false;
             document.getElementById('prod-new').checked = product.isNew || false;
+            document.getElementById('prod-recommended').checked = product.recommended || false;
             document.getElementById('prod-available').checked = product.available !== false;
 
             const availLabel = document.getElementById('availability-label');
@@ -1234,11 +1213,7 @@ async function saveProduct() {
     for (let img of currentProductImages) {
         if (img.startsWith('data:')) {
             const url = await uploadImageToDrive(img, `product_${Date.now()}.jpg`);
-            if (url) {
-                uploadedImages.push(url);
-            } else {
-                uploadedImages.push(img);
-            }
+            uploadedImages.push(url || img);
         } else {
             uploadedImages.push(img);
         }
@@ -1261,10 +1236,9 @@ async function saveProduct() {
         vat: document.getElementById('prod-vat').value,
         popular: document.getElementById('prod-popular').checked,
         isNew: document.getElementById('prod-new').checked,
+        recommended: document.getElementById('prod-recommended').checked,
         available,
-        createdAt: editingProductId
-            ? products.find(p => p.id === editingProductId)?.createdAt
-            : new Date().toISOString()
+        createdAt: editingProductId ? products.find(p => p.id === editingProductId)?.createdAt : new Date().toISOString()
     };
 
     if (editingProductId) {
@@ -1275,6 +1249,7 @@ async function saveProduct() {
     }
 
     localStorage.setItem('products', JSON.stringify(products));
+    autoSaveSettings();
     closeProductModal();
     renderProducts();
     updateStats();
@@ -1287,9 +1262,7 @@ function renderProducts() {
     const categoryFilter = document.getElementById('category-filter').value;
 
     let filtered = products.filter(p => {
-        const matchesSearch =
-            (p.nameAz || '').toLowerCase().includes(search) ||
-            (p.nameEn || '').toLowerCase().includes(search);
+        const matchesSearch = (p.nameAz || '').toLowerCase().includes(search) || (p.nameEn || '').toLowerCase().includes(search);
         const matchesCategory = !categoryFilter || p.categoryId === parseInt(categoryFilter);
         return matchesSearch && matchesCategory;
     });
@@ -1318,6 +1291,7 @@ function renderProducts() {
         const badges = [];
         if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-star text-xs"></i> Populyar</span>');
         if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-leaf text-xs"></i> Yeni</span>');
+        if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-thumbs-up text-xs"></i> Tövsiyə</span>');
 
         const availBadge = product.available !== false
             ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
@@ -1369,6 +1343,19 @@ function toggleProductAvailability(productId) {
     }
 }
 
+function viewImage(src) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
+        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
+}
+
 function updateCategoryFilter() {
     const select = document.getElementById('category-filter');
     select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
@@ -1385,15 +1372,13 @@ function deleteProduct(id) {
     if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
         products = products.filter(p => p.id !== id);
         localStorage.setItem('products', JSON.stringify(products));
+        autoSaveSettings();
         renderProducts();
         updateStats();
         debouncedSync();
     }
 }
 
-// ============================================
-// IMAGE FUNCTIONS
-// ============================================
 function handleDragOver(e) {
     e.preventDefault();
     e.currentTarget.classList.add('dragover');
@@ -1439,22 +1424,6 @@ function removeImage(index) {
     renderImagePreview();
 }
 
-function viewImage(src) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
-        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    modal.onclick = () => modal.remove();
-    document.body.appendChild(modal);
-}
-
-// ============================================
-// CATEGORY FUNCTIONS
-// ============================================
 function openCategoryModal(categoryId = null) {
     editingCategoryId = categoryId;
     document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
@@ -1560,9 +1529,6 @@ function filterCategories() {
     renderCategories();
 }
 
-// ============================================
-// TABLE FUNCTIONS
-// ============================================
 function openTableModal(tableId = null) {
     editingTableId = tableId;
     document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
@@ -1688,9 +1654,6 @@ function deleteTable(id) {
     }
 }
 
-// ============================================
-// QR CODE
-// ============================================
 function showQRCode(tableId) {
     const table = tables.find(t => t.id === tableId);
     if (!table) return;
@@ -1749,9 +1712,6 @@ function printQR() {
     }
 }
 
-// ============================================
-// RESERVATIONS
-// ============================================
 function openReservationModal() {
     const tableSelect = document.getElementById('res-table');
     tableSelect.innerHTML = '<option value="">Seçin...</option>';
@@ -1885,9 +1845,6 @@ function cancelReservation(id) {
     }
 }
 
-// ============================================
-// ORDERS
-// ============================================
 function renderOrders() {
     const container = document.getElementById('orders-list');
     const search = document.getElementById('order-search')?.value.toLowerCase() || '';
@@ -1948,10 +1905,53 @@ function filterOrders() {
     renderOrders();
 }
 
-// ============================================
-// SETTINGS
-// ============================================
+function handleLogoUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentLogo = e.target.result;
+            document.getElementById('logo-image').src = currentLogo;
+            document.getElementById('logo-image').classList.remove('hidden');
+            document.getElementById('logo-placeholder').classList.add('hidden');
+            autoSaveSettings();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeLogo() {
+    currentLogo = null;
+    document.getElementById('logo-image').classList.add('hidden');
+    document.getElementById('logo-placeholder').classList.remove('hidden');
+    document.getElementById('logo-image').src = '';
+    autoSaveSettings();
+}
+
+function handleHeroImageUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentHeroImage = e.target.result;
+            document.getElementById('hero-image-preview').src = currentHeroImage;
+            document.getElementById('hero-image-preview').classList.remove('hidden');
+            document.getElementById('hero-image-placeholder').classList.add('hidden');
+            autoSaveSettings();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeHeroImage() {
+    currentHeroImage = null;
+    document.getElementById('hero-image-preview').src = '';
+    document.getElementById('hero-image-preview').classList.add('hidden');
+    document.getElementById('hero-image-placeholder').classList.remove('hidden');
+    autoSaveSettings();
+}
+
 function autoSaveSettings() {
+    const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
+
     settings = {
         nameAz: document.getElementById('rest-name-az').value,
         nameEn: document.getElementById('rest-name-en').value,
@@ -1965,6 +1965,11 @@ function autoSaveSettings() {
         instagram: document.getElementById('social-instagram').value,
         whatsapp: document.getElementById('social-whatsapp').value,
         autoTranslate: document.getElementById('auto-translate-enabled').checked,
+        smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
+        heroTitleAz: document.getElementById('hero-title-az')?.value || '',
+        heroTitleEn: document.getElementById('hero-title-en')?.value || '',
+        heroImage: currentHeroImage,
+        recommendedIds: JSON.stringify(recommendedIds),
         logo: currentLogo
     };
 
@@ -1989,6 +1994,15 @@ function loadSettings() {
     if (savedSettings.autoTranslate !== undefined) {
         document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
     }
+    if (document.getElementById('smart-search-enabled')) {
+        document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
+    }
+    if (document.getElementById('hero-title-az')) {
+        document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
+    }
+    if (document.getElementById('hero-title-en')) {
+        document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
+    }
 
     if (savedSettings.logo) {
         currentLogo = savedSettings.logo;
@@ -1996,39 +2010,15 @@ function loadSettings() {
         document.getElementById('logo-image').classList.remove('hidden');
         document.getElementById('logo-placeholder').classList.add('hidden');
     }
-}
 
-function handleLogoUpload(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentLogo = e.target.result;
-            document.getElementById('logo-image').src = currentLogo;
-            document.getElementById('logo-image').classList.remove('hidden');
-            document.getElementById('logo-placeholder').classList.add('hidden');
-
-            settings.logo = currentLogo;
-            localStorage.setItem('settings', JSON.stringify(settings));
-            debouncedSync();
-        };
-        reader.readAsDataURL(input.files[0]);
+    if (savedSettings.heroImage) {
+        currentHeroImage = savedSettings.heroImage;
+        document.getElementById('hero-image-preview').src = currentHeroImage;
+        document.getElementById('hero-image-preview').classList.remove('hidden');
+        document.getElementById('hero-image-placeholder').classList.add('hidden');
     }
 }
 
-function removeLogo() {
-    currentLogo = null;
-    document.getElementById('logo-image').classList.add('hidden');
-    document.getElementById('logo-placeholder').classList.remove('hidden');
-    document.getElementById('logo-image').src = '';
-
-    settings.logo = null;
-    localStorage.setItem('settings', JSON.stringify(settings));
-    debouncedSync();
-}
-
-// ============================================
-// DASHBOARD & CHARTS
-// ============================================
 function updateStats() {
     document.getElementById('stat-products').textContent = products.length;
     document.getElementById('stat-categories').textContent = categories.length;
@@ -2088,9 +2078,7 @@ function initCharts() {
     const ctx = document.getElementById('weeklyOrdersChart');
     if (!ctx) return;
 
-    if (weeklyChart) {
-        weeklyChart.destroy();
-    }
+    if (weeklyChart) weeklyChart.destroy();
 
     const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(5, 150, 105, 0.8)');
@@ -2139,9 +2127,6 @@ function initCharts() {
     });
 }
 
-// ============================================
-// INITIALIZATION
-// ============================================
 function initApp() {
     updateStats();
     renderCategories();
