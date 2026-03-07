@@ -18,7 +18,7 @@
         .card-hover { transition: all 0.2s; }
         .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .status-badge { font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 500; }
-        .chart-container { position: relative; height: 200px; }
+        .chart-container { position: relative; height: 300px; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -27,12 +27,13 @@
         .notification-dot { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .login-bg { background: linear-gradient(135deg, #0a1f0a 0%, #1a3a1a 100%); }
-        .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-        .image-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb; }
+        .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+        .image-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; cursor: pointer; transition: all 0.2s; }
+        .image-item:hover { transform: scale(1.05); border-color: #059669; }
         .image-item img { width: 100%; height: 100%; object-fit: cover; }
-        .image-item .remove-btn { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: rgba(239, 68, 68, 0.9); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+        .image-item .remove-btn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(239, 68, 68, 0.9); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
         .image-item:hover .remove-btn { opacity: 1; }
-        .drag-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem; text-align: center; transition: all 0.2s; }
+        .drag-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem; text-align: center; transition: all 0.2s; background: #fafafa; }
         .drag-area.dragover { border-color: #059669; background-color: #ecfdf5; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
@@ -41,16 +42,31 @@
         .qr-code-container { display: flex; justify-content: center; padding: 20px; background: white; border-radius: 12px; }
         .table-card { transition: all 0.3s; }
         .table-card:hover { transform: translateY(-4px); }
-        .sync-status { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; z-index: 100; transition: all 0.3s; }
+        .sync-indicator { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 50px; color: white; font-weight: 500; z-index: 100; transition: all 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .sync-success { background: #10b981; }
         .sync-error { background: #ef4444; }
         .sync-loading { background: #3b82f6; }
+        .availability-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+        .availability-toggle input { display: none; }
+        .toggle-slider { width: 50px; height: 26px; background: #ef4444; border-radius: 26px; position: relative; transition: 0.3s; }
+        .toggle-slider:before { content: ''; position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+        .availability-toggle input:checked + .toggle-slider { background: #10b981; }
+        .availability-toggle input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .toggle-label { margin-left: 10px; font-weight: 600; font-size: 14px; }
+        .product-image-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .product-image-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; }
+        .logo-preview { width: 150px; height: 150px; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; }
+        .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .gradient-text { background: linear-gradient(135deg, #059669 0%, #0d9488 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
 
-<!-- Sync Status Notification -->
-<div id="sync-status" class="sync-status hidden"></div>
+<!-- Sync Indicator -->
+<div id="sync-indicator" class="sync-indicator hidden">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    <span id="sync-text">Sinxronizasiya...</span>
+</div>
 
 <!-- Login Screen -->
 <div id="login-screen" class="fixed inset-0 login-bg z-50 flex items-center justify-center">
@@ -163,10 +179,10 @@
                     <p id="page-subtitle" class="text-sm text-gray-500">Restoranınızın ümumi vəziyyəti</p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button onclick="syncAllData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                        <i class="fas fa-sync-alt" id="sync-icon"></i>
-                        Excel-ə Yaz
-                    </button>
+                    <div id="sync-status-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Sinxronizasiya edildi</span>
+                    </div>
                     <button class="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
                         <i class="fas fa-bell text-xl"></i>
                         <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -181,12 +197,12 @@
                 <!-- Dashboard Page -->
                 <div id="page-dashboard" class="page-content fade-in">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-green-500">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-shopping-cart text-gray-600"></i>
+                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-shopping-cart text-green-600 text-xl"></i>
                                 </div>
-                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1">
+                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
                                     <i class="fas fa-arrow-up text-xs"></i> +12%
                                 </span>
                             </div>
@@ -194,12 +210,12 @@
                             <div class="text-sm text-gray-500">Bugünkü Sifarişlər</div>
                         </div>
 
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-amber-500">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-chart-line text-orange-600"></i>
+                                <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-amber-600 text-xl"></i>
                                 </div>
-                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1">
+                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
                                     <i class="fas fa-arrow-up text-xs"></i> +8%
                                 </span>
                             </div>
@@ -207,10 +223,10 @@
                             <div class="text-sm text-gray-500">Bugünkü Gəlir</div>
                         </div>
 
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-teal-500">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-utensils text-teal-600"></i>
+                                <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-utensils text-teal-600 text-xl"></i>
                                 </div>
                             </div>
                             <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-products">0</div>
@@ -218,10 +234,10 @@
                             <div class="text-xs text-gray-400 mt-1"><span id="stat-categories">0</span> kateqoriya</div>
                         </div>
 
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-red-500">
                             <div class="flex justify-between items-start mb-4">
-                                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-table text-red-600"></i>
+                                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-table text-red-600 text-xl"></i>
                                 </div>
                             </div>
                             <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-tables">0</div>
@@ -231,17 +247,38 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                         <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
-                            <h3 class="font-semibold text-gray-800 mb-2">Həftəlik Sifarişlər</h3>
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 text-lg">Həftəlik Sifarişlər</h3>
+                                    <p class="text-xs text-gray-500">Son 7 günün statistikası</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">+22% artım</span>
+                                </div>
+                            </div>
                             <div class="chart-container">
                                 <canvas id="weeklyOrdersChart"></canvas>
                             </div>
                         </div>
 
                         <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <h3 class="font-semibold text-gray-800 mb-4">Son Sifarişlər</h3>
+                            <h3 class="font-bold text-gray-800 text-lg mb-4">Son Sifarişlər</h3>
                             <div class="space-y-3" id="recent-orders-list">
                                 <!-- Dynamic content -->
                             </div>
+                            <button onclick="showPage('orders')" class="w-full mt-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                                Bütün sifarişlərə bax <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-bold text-gray-800 text-lg">Populyar Məhsullar</h3>
+                            <button onclick="showPage('products')" class="text-sm text-green-700 hover:text-green-800 font-medium">Hamısına bax <i class="fas fa-arrow-right ml-1"></i></button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="popular-products-grid">
+                            <!-- Dynamic content -->
                         </div>
                     </div>
                 </div>
@@ -365,23 +402,31 @@
                 <!-- Settings Page -->
                 <div id="page-settings" class="page-content hidden fade-in">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Google Sheets Config -->
-                        <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-blue-100">
+                        <!-- Logo Upload -->
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
                             <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-table text-blue-600"></i>
+                                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-image text-amber-600"></i>
                                 </div>
-                                <h4 class="font-semibold text-gray-800">Google Sheets Bağlantısı</h4>
+                                <h4 class="font-semibold text-gray-800">Restoran Logosu</h4>
                             </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Google Apps Script URL</label>
-                                    <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/..." class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                                    <p class="text-xs text-gray-500 mt-2">Google Apps Script web app URL-nizi daxil edin</p>
+                            <div class="flex flex-col items-center">
+                                <div class="logo-preview mb-4" id="logo-preview-container">
+                                    <div class="text-center text-gray-400" id="logo-placeholder">
+                                        <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+                                        <p class="text-sm">Logo yükləyin</p>
+                                    </div>
+                                    <img id="logo-image" class="hidden" src="" alt="Logo">
                                 </div>
-                                <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
-                                    <i class="fas fa-save mr-2"></i> Yadda Saxla
-                                </button>
+                                <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoUpload(this)">
+                                <div class="flex gap-2">
+                                    <button onclick="document.getElementById('logo-input').click()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm">
+                                        <i class="fas fa-upload mr-2"></i>Logo Seç
+                                    </button>
+                                    <button onclick="removeLogo()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                                        <i class="fas fa-trash mr-2"></i>Sil
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -396,19 +441,19 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (AZ)</label>
-                                    <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (EN)</label>
-                                    <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2">Telefon</label>
-                                    <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2">Email</label>
-                                    <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                             </div>
                         </div>
@@ -424,15 +469,15 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-facebook text-blue-600 mr-1"></i> Facebook</label>
-                                    <input type="text" id="social-facebook" placeholder="https://facebook.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="social-facebook" placeholder="https://facebook.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-instagram text-pink-600 mr-1"></i> Instagram</label>
-                                    <input type="text" id="social-instagram" placeholder="https://instagram.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="social-instagram" placeholder="https://instagram.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-whatsapp text-green-600 mr-1"></i> WhatsApp</label>
-                                    <input type="text" id="social-whatsapp" placeholder="+994XXXXXXXXX" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm">
+                                    <input type="text" id="social-whatsapp" placeholder="+994XXXXXXXXX" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                             </div>
                         </div>
@@ -451,7 +496,7 @@
                                     <p class="text-xs text-gray-500">Yemək adları və təsvirlər avtomatik tərcümə edilsin</p>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="auto-translate-enabled" class="sr-only peer" checked>
+                                    <input type="checkbox" id="auto-translate-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                                 </label>
                             </div>
@@ -473,9 +518,22 @@
             </button>
         </div>
         <div class="p-6 space-y-6">
+            <!-- MÖVCUD / BİTTİ TOGGLE -->
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div>
+                    <p class="font-semibold text-gray-800">Məhsul Vəziyyəti</p>
+                    <p class="text-xs text-gray-500">Müştərilər üçün görünürlük</p>
+                </div>
+                <label class="availability-toggle">
+                    <input type="checkbox" id="prod-available" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label" id="availability-label">Mövcuddur</span>
+                </label>
+            </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (Azərbaycanca) <span class="text-red-500">*</span></label>
-                <input type="text" id="prod-name-az" oninput="translateAndUpdate()" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Məsələn: Lülə Kabab">
+                <input type="text" id="prod-name-az" oninput="smartTranslate()" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Məsələn: Lülə Kabab">
             </div>
 
             <div id="translation-box" class="translate-box rounded-xl p-4 text-white hidden">
@@ -488,7 +546,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (Azərbaycanca)</label>
-                <textarea id="prod-desc-az" oninput="translateDesc()" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Yeməyin tərkibi və xüsusiyyətləri..."></textarea>
+                <textarea id="prod-desc-az" oninput="smartTranslateDesc()" rows="3" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Yeməyin tərkibi və xüsusiyyətləri..."></textarea>
             </div>
 
             <div id="desc-translation-box" class="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl p-4 text-white hidden">
@@ -513,17 +571,17 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər <span class="text-xs text-gray-400">(Çoxlu seçə bilərsiniz)</span></label>
                 <div class="drag-area" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
                     <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
                     <p class="text-sm text-gray-600">Şəkilləri bura sürükləyin və ya <span class="text-green-700 font-medium cursor-pointer" onclick="document.getElementById('file-input').click()">seçin</span></p>
-                    <p class="text-xs text-gray-400 mt-1">Google Drive-a yüklənəcək</p>
+                    <p class="text-xs text-gray-400 mt-1">Bir neçə şəkil əlavə edə bilərsiniz</p>
                     <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
                 </div>
                 <div id="image-preview" class="image-gallery mt-4"></div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-6">
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
                     <span class="text-sm text-gray-700">Populyar</span>
@@ -531,10 +589,6 @@
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
                     <span class="text-sm text-gray-700">Yeni</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="prod-active" checked class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
-                    <span class="text-sm text-gray-700">Aktiv</span>
                 </label>
             </div>
         </div>
@@ -710,10 +764,21 @@
 </div>
 
 <script>
-// ==================== GOOGLE SHEETS CONFIG ====================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzsoMOauOfEzua7Q2qvPoP5wRQA4LKSZhVMSX_avjJG-XGG6wgP0SR0kAvrg0d3g6pZDg/exec'; // ÖZ URL-NİZİ YAZIN
+// ============================================
+// KONFIQURASIYA - BURADA DƏYİŞİN
+// ============================================
 
-// Data Storage
+// GOOGLE APPS SCRIPT URL - BURAYA ÖZ URL-NİZİ YAZIN
+const CONFIG = {
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbyiBULhVDK8-p6a_GrgEYMiV3Ym1e8CN3xJY4oJYKw-4HBBxw9IYPrfUEc0l-DChv8c1w/exec', // <-- BUNU DƏYİŞİN
+    AUTO_SYNC: true, // Avtomatik sinxronizasiya
+    SYNC_DELAY: 2000 // 2 saniyə gecikmə
+};
+
+// ============================================
+// DATA STORAGE
+// ============================================
+
 let categories = JSON.parse(localStorage.getItem('categories')) || [];
 let products = JSON.parse(localStorage.getItem('products')) || [];
 let orders = JSON.parse(localStorage.getItem('orders')) || [];
@@ -726,102 +791,303 @@ let editingProductId = null;
 let editingCategoryId = null;
 let editingTableId = null;
 let currentQRTable = null;
+let syncTimeout = null;
+let currentLogo = null;
 
-// Tərcümə Sözlüyü
+// ============================================
+// YAXŞILAŞDIRILMIŞ TƏRCÜMƏ SİSTEMİ
+// ============================================
+
 const translationDict = {
+    // Əsas yeməklər
     'lülə': 'Lyulya', 'kabab': 'Kebab', 'toyuq': 'Chicken', 'qızardılmış': 'Fried',
-    'salat': 'Salad', 'çoban': 'Shepherd', 'plov': 'Plov', 'şirniyyat': 'Dessert',
+    'basdırma': 'Bastirma', 'dönər': 'Doner', 'manqal': 'BBQ', 'izqara': 'Grilled',
+    'sac': 'Sac', 'tava': 'Pan', 'qovurma': 'Fried', 'haslama': 'Boiled',
+    'buğlama': 'Steamed', 'qaynatma': 'Stew', 'bozartma': 'Bozartma',
+    
+    // Şorbalar və sup
+    'merci': 'Lentil', 'dovğa': 'Dovga', 'xəngəl': 'Khangal', 'sulu': 'Soup',
+    'sup': 'Soup', 'şorba': 'Soup', 'yuxa': 'Yukha', 'kətə': 'Kete',
+    
+    // Salatlar
+    'salat': 'Salad', 'çoban': 'Shepherd', 'mimoza': 'Mimosa', 'sezar': 'Caesar',
+    'paytaxt': 'Capital', 'greek': 'Greek', 'ton': 'Tuna',
+    
+    // İçkilər
     'içki': 'Drink', 'su': 'Water', 'çay': 'Tea', 'qəhvə': 'Coffee',
-    'fast': 'Fast', 'food': 'Food', 'burger': 'Burger', 'pizza': 'Pizza',
-    'isti': 'Hot', 'soyuq': 'Cold', 'yemək': 'Meal', 'qarnir': 'Side Dish',
-    'sous': 'Sauce', 'çörək': 'Bread', 'sup': 'Soup', 'dolma': 'Dolma',
-    'kebab': 'Kebab', 'kotlet': 'Cutlet', 'balıq': 'Fish', 'tərəvəz': 'Vegetable',
-    'meyvə': 'Fruit', 'süd': 'Milk', 'şirə': 'Juice', 'limonad': 'Lemonade',
-    'kola': 'Cola', 'fanta': 'Fanta', 'sprite': 'Sprite', 'enerji': 'Energy',
-    'alkoqol': 'Alcohol', 'pive': 'Beer', 'şarap': 'Wine', 'viski': 'Whiskey',
-    'votka': 'Vodka', 'rom': 'Rum', 'kokteyl': 'Cocktail', 'mojito': 'Mojito',
-    'margarita': 'Margarita', 'pasta': 'Pasta', 'spagetti': 'Spaghetti', 'pide': 'Pide',
-    'lahmacun': 'Lahmacun', 'dönər': 'Doner', 'lavaş': 'Lavash', 'tandir': 'Tandir',
-    'sac': 'Sac', 'manqal': 'Mangal', 'izqara': 'Grill', 'sote': 'Saute',
-    'qovurma': 'Fry', 'haslama': 'Boiled', 'buğlama': 'Steamed', 'qaynatma': 'Stew',
-    'xəmir': 'Dough', 'pendir': 'Cheese', 'yağ': 'Butter', 'sarımsaq': 'Garlic',
-    'soğan': 'Onion', 'pomidor': 'Tomato', 'xiyar': 'Cucumber', 'bibər': 'Pepper',
-    'kartof': 'Potato', 'yerkökü': 'Carrot', 'kələm': 'Cabbage', 'ispanaq': 'Spinach',
-    'göyərti': 'Greens', 'ot': 'Herb', 'duz': 'Salt', 'istiot': 'Black Pepper',
-    'sirkə': 'Vinegar', 'limon': 'Lemon', 'zeytun': 'Olive', 'yağlı': 'Oily',
-    'az yağlı': 'Low Fat', 'diyet': 'Diet', 'vegan': 'Vegan', 'vegetarian': 'Vegetarian',
-    'acılı': 'Spicy', 'şirin': 'Sweet', 'turş': 'Sour', 'duzlu': 'Salty',
-    'xırtıldayan': 'Crispy', 'yumşaq': 'Soft', 'təzə': 'Fresh', 'donmuş': 'Frozen',
-    'qovrulmuş': 'Roasted', 'qızarmış': 'Fried', 'bişmiş': 'Baked', 'qaynadılmış': 'Boiled',
-    'buharlanmış': 'Steamed', 'qızıl': 'Golden', 'qəhvəyi': 'Brown', 'ağ': 'White',
-    'qara': 'Black', 'qırmızı': 'Red', 'yaşıl': 'Green', 'sarı': 'Yellow',
-    'narıncı': 'Orange', 'mavi': 'Blue', 'bənövşəyi': 'Purple', 'çəhrayı': 'Pink',
-    'boz': 'Gray', 'tünd': 'Dark', 'açıq': 'Light', 'kiçik': 'Small',
-    'orta': 'Medium', 'böyük': 'Large', 'əlavə': 'Extra', 'xüsusi': 'Special',
-    'günün': 'Daily', 'menyu': 'Menu', 'set': 'Set', 'kombo': 'Combo',
-    'portiya': 'Portion', 'nəfər': 'Person', 'qram': 'Gram', 'kq': 'Kg',
-    'ml': 'Ml', 'litr': 'Liter', 'ədəd': 'Piece', 'dilim': 'Slice',
-    'porsiyon': 'Portion', 'qab': 'Bowl', 'stəkan': 'Glass', 'fincan': 'Cup',
-    'şüşə': 'Bottle', 'qutu': 'Box', 'paket': 'Package', 'sifariş': 'Order',
-    'çatdırılma': 'Delivery', 'götürmə': 'Takeaway', 'masa': 'Table', 'rezervasiya': 'Reservation',
-    'ödəniş': 'Payment', 'nağd': 'Cash', 'kart': 'Card', 'online': 'Online',
-    'endirim': 'Discount', 'kampaniya': 'Campaign', 'hədiyyə': 'Gift', 'bonus': 'Bonus',
-    'kupon': 'Coupon', 'kod': 'Code', 'qr': 'QR', 'sayt': 'Website',
-    'tətbiq': 'App', 'mobil': 'Mobile', 'telefon': 'Phone', 'nömrə': 'Number',
-    'ünvan': 'Address', 'şəhər': 'City', 'rayon': 'District', 'küçə': 'Street',
-    'bina': 'Building', 'restoran': 'Restaurant', 'kafe': 'Cafe', 'bar': 'Bar',
-    'pub': 'Pub', 'klub': 'Club', 'otell': 'Hotel', 'mağaza': 'Shop',
-    'market': 'Market', 'supermarket': 'Supermarket', 'park': 'Park', 'bulvar': 'Boulevard',
-    'metro': 'Metro', 'stansiya': 'Station', 'taxi': 'Taxi', 'avtobus': 'Bus',
-    'qatar': 'Train', 'təyyarə': 'Plane', 'gəmi': 'Ship', 'avtomobil': 'Car',
-    'parkinq': 'Parking', 'yardım': 'Help', 'dəstək': 'Support', 'əlaqə': 'Contact',
-    'məlumat': 'Info', 'haqqında': 'About', 'qaydalar': 'Rules', 'şərtlər': 'Terms',
-    'məxfilik': 'Privacy', 'faq': 'FAQ', 'suallar': 'Questions', 'cavablar': 'Answers',
-    'təklif': 'Suggestion', 'şikayət': 'Complaint', 'bəyənmə': 'Like', 'reyting': 'Rating',
-    'rəy': 'Review', 'şərh': 'Comment', 'paylaş': 'Share', 'tövsiyə': 'Recommend',
-    'seçim': 'Choice', 'variant': 'Option', 'alternativ': 'Alternative', 'dəyişiklik': 'Change',
-    'əlavə et': 'Add', 'sil': 'Delete', 'redaktə et': 'Edit', 'yadda saxla': 'Save',
-    'ləğv et': 'Cancel', 'təsdiqlə': 'Confirm', 'imtina et': 'Reject', 'qaytar': 'Return',
-    'dəyişdir': 'Change', 'yenilə': 'Update', 'yüklə': 'Upload', 'endir': 'Download',
-    'çap et': 'Print', 'göndər': 'Send', 'başla': 'Start', 'bitir': 'Finish',
-    'davam et': 'Continue', 'qayıt': 'Back', 'irəli': 'Next', 'son': 'Last',
-    'ilk': 'First', 'yuxarı': 'Up', 'aşağı': 'Down', 'sağ': 'Right',
-    'sol': 'Left', 'içəri': 'Inside', 'çöl': 'Outside', 'yan': 'Side',
-    'arxa': 'Back', 'ön': 'Front', 'üst': 'Top', 'alt': 'Bottom',
-    'və': 'and', 'və ya': 'or', 'amma': 'but', 'çünki': 'because',
-    'əgər': 'if', 'belə ki': 'so', 'həm': 'both', 'yalnız': 'only',
-    'bütün': 'all', 'heç bir': 'none', 'bəzi': 'some', 'bir neçə': 'several',
-    'çox': 'many', 'az': 'few', 'daha': 'more', 'ən': 'most',
-    'heç': 'never', 'həmişə': 'always', 'tez-tez': 'often', 'bəzən': 'sometimes',
-    'indi': 'now', 'bu gün': 'today', 'dünən': 'yesterday', 'sabah': 'tomorrow',
-    'həftə': 'week', 'ay': 'month', 'il': 'year', 'səhər': 'morning',
-    'günorta': 'noon', 'axşam': 'evening', 'gecə': 'night', 'saat': 'hour',
-    'dəqiqə': 'minute', 'gün': 'day', 'həftə sonu': 'weekend', 'iş günü': 'weekday',
-    'tətil': 'holiday', 'bayram': 'festival', 'ətsiz': 'meatless', 'vegetarian': 'vegetarian',
-    'vegan': 'vegan', 'glutensiz': 'gluten-free', 'laktozsuz': 'lactose-free', 'şəkərsiz': 'sugar-free',
-    'duzsuz': 'salt-free', 'az kalorili': 'low-calorie', 'proteinli': 'high-protein', 'fitness': 'fitness',
-    'keto': 'keto', 'paleo': 'paleo', 'orqanik': 'organic', 'təbii': 'natural',
-    'evdə hazırlanmış': 'homemade', 'əl işi': 'handmade', 'ənənəvi': 'traditional', 'müasir': 'modern',
-    'fərqli': 'different', 'xüsusi': 'special', 'seçilmiş': 'selected', 'premium': 'premium',
-    'lüks': 'luxury', 'ekonom': 'economy', 'sərfəli': 'affordable', 'keyfiyyətli': 'quality'
+    'espresso': 'Espresso', 'latte': 'Latte', 'cappuccino': 'Cappuccino',
+    'americano': 'Americano', 'mocha': 'Mocha', 'frappe': 'Frappe',
+    'limonad': 'Lemonade', 'mojito': 'Mojito', 'smoothie': 'Smoothie',
+    'milkshake': 'Milkshake', 'şirə': 'Juice', 'kompot': 'Compote',
+    
+    // Alkoqol
+    'pive': 'Beer', 'şarap': 'Wine', 'viski': 'Whiskey', 'votka': 'Vodka',
+    'rom': 'Rum', 'cognac': 'Cognac', 'tekila': 'Tequila', 'cin': 'Gin',
+    'kokteyl': 'Cocktail', 'margarita': 'Margarita', 'piña colada': 'Pina Colada',
+    
+    // Şirniyyat
+    'şirniyyat': 'Dessert', 'paxlava': 'Pakhlava', 'şəkərbura': 'Shekerbura',
+    'qoqal': 'Gogal', 'badambura': 'Badambura', 'tort': 'Cake',
+    'puding': 'Pudding', 'dondurma': 'Ice Cream', 'waffle': 'Waffle',
+    'pancake': 'Pancake', 'cheesecake': 'Cheesecake', 'tiramisu': 'Tiramisu',
+    'brownie': 'Brownie', 'muffin': 'Muffin', 'croissant': 'Croissant',
+    'baklava': 'Baklava', 'kadayif': 'Kadayif', 'künefe': 'Kunefe',
+    
+    // Fast Food
+    'burger': 'Burger', 'cheeseburger': 'Cheeseburger', 'hamburger': 'Hamburger',
+    'pizza': 'Pizza', 'hot dog': 'Hot Dog', 'sandwich': 'Sandwich',
+    'taco': 'Taco', 'burrito': 'Burrito', 'nuggets': 'Nuggets', 'fries': 'Fries',
+    'onion rings': 'Onion Rings', 'nachos': 'Nachos',
+    
+    // İtalyan
+    'pasta': 'Pasta', 'spagetti': 'Spaghetti', 'makaron': 'Pasta',
+    'lasagna': 'Lasagna', 'risotto': 'Risotto', 'ravioli': 'Ravioli',
+    'fettuccine': 'Fettuccine', 'penne': 'Penne', 'tagliatelle': 'Tagliatelle',
+    'alfredo': 'Alfredo', 'bolognese': 'Bolognese', 'carbonara': 'Carbonara',
+    'pesto': 'Pesto', 'arrabbiata': 'Arrabbiata', 'marinara': 'Marinara',
+    
+    // Asiya
+    'sushi': 'Sushi', 'sashimi': 'Sashimi', 'ramen': 'Ramen', 'udon': 'Udon',
+    'soba': 'Soba', 'tempura': 'Tempura', 'dim sum': 'Dim Sum', 'wok': 'Wok',
+    'pad thai': 'Pad Thai', 'curry': 'Curry', 'noodle': 'Noodle', 'rice': 'Rice',
+    
+    // Ət növləri
+    'quzu': 'Lamb', 'dana': 'Beef', 'mal': 'Beef', 'cücə': 'Chicken',
+    'hinduşka': 'Turkey', 'ördek': 'Duck', 'qaz': 'Goose', 'bıldırcın': 'Quail',
+    'dove': 'Dove', 'sazan': 'Carp', 'kütüm': 'Trout', 'qızılbalıq': 'Salmon',
+    'tuna': 'Tuna', 'sardina': 'Sardine', 'midye': 'Mussel', 'krevet': 'Shrimp',
+    'xərçəng': 'Crab', 'ilbiz': 'Snail', 'kalmar': 'Squid', 'osminoq': 'Octopus',
+    
+    // Tərəvəzlər
+    'badımcan': 'Eggplant', 'kabak': 'Zucchini', 'pomidor': 'Tomato',
+    'xiyar': 'Cucumber', 'bibər': 'Pepper', 'kartof': 'Potato', 'soğan': 'Onion',
+    'sarımsaq': 'Garlic', 'kələm': 'Cabbage', 'qarğıdalı': 'Corn', 'ispanaq': 'Spinach',
+    'göy soğan': 'Green Onion', 'cəfəri': 'Parsley', 'keşniş': 'Cilantro',
+    'reyhan': 'Basil', 'nanə': 'Mint', 'dereotu': 'Dill', 'rozmarin': 'Rosemary',
+    'zeytun': 'Olive', 'turşu': 'Pickle', 'hummus': 'Hummus', 'tzatziki': 'Tzatziki',
+    
+    // Souslar
+    'sous': 'Sauce', 'ketchup': 'Ketchup', 'mayonez': 'Mayonnaise', 'mustard': 'Mustard',
+    'ranch': 'Ranch', 'barbekyu': 'BBQ', 'salsa': 'Salsa', 'guacamole': 'Guacamole',
+    'teriyaki': 'Teriyaki', 'soya': 'Soy', 'balzamik': 'Balsamic', 'pesto': 'Pesto',
+    'hollandez': 'Hollandaise', 'béchamel': 'Bechamel', 'marinara': 'Marinara',
+    
+    // Ədviyyatlar
+    'duz': 'Salt', 'istiot': 'Pepper', 'pul bibər': 'Red Pepper', 'sumaq': 'Sumac',
+    'zəfəran': 'Saffron', 'tarçın': 'Cinnamon', 'mixək': 'Clove', 'zəncəfil': 'Ginger',
+    'kardamom': 'Cardamom', 'kimyon': 'Cumin', 'kişniş': 'Coriander', 'nane': 'Mint',
+    'kekik': 'Thyme', 'biberiye': 'Rosemary', 'defne': 'Bay Leaf', 'safran': 'Saffron',
+    
+    // Digər
+    'çörək': 'Bread', 'lavaş': 'Lavash', 'tandir': 'Tandir', 'pide': 'Pide',
+    'bazlama': 'Bazlama', 'simit': 'Simit', 'açma': 'Achma', 'poğaça': 'Pogaca',
+    'börek': 'Borek', 'gözleme': 'Gozleme', 'mantı': 'Manti', 'kreplər': 'Crepes',
+    'blinçik': 'Blini', 'pankejklər': 'Pancakes', 'vafli': 'Waffles',
+    
+    // Ölçü vahidləri
+    'qram': 'grams', 'kq': 'kg', 'ml': 'ml', 'litr': 'liter', 'ədəd': 'pieces',
+    'porsiyon': 'portion', 'nəfərlik': 'person', 'kiçik': 'small', 'orta': 'medium',
+    'böyük': 'large', 'ailəlik': 'family size', 'döner': 'wrap',
+    
+    // Təsvir üçün
+    'təzə': 'fresh', 'isti': 'hot', 'soyuq': 'cold', 'acılı': 'spicy', 'şirin': 'sweet',
+    'turş': 'sour', 'duzlu': 'salty', 'xırtıldayan': 'crispy', 'yumşaq': 'soft',
+    'ləzzətli': 'delicious', 'sərfəli': 'affordable', 'keyfiyyətli': 'quality',
+    'evdə hazırlanmış': 'homemade', 'əl işi': 'handmade', 'ənənəvi': 'traditional',
+    'müasir': 'modern', 'sağlam': 'healthy', 'dietik': 'diet', 'vegetarian': 'vegetarian',
+    'vegan': 'vegan', 'glutensiz': 'gluten-free', 'laktozsuz': 'lactose-free',
+    'şəkərsiz': 'sugar-free', 'az yağlı': 'low-fat', 'proteinli': 'high-protein'
 };
 
-// Avtomatik tərcümə funksiyası
+// Smart Translate - daha yaxşı tərcümə
+function smartTranslate() {
+    const azText = document.getElementById('prod-name-az').value;
+    if (!azText || !document.getElementById('auto-translate-enabled')?.checked) {
+        document.getElementById('translation-box').classList.add('hidden');
+        return;
+    }
+    
+    const translated = translateAzToEn(azText);
+    
+    if (translated && translated !== azText) {
+        document.getElementById('translation-box').classList.remove('hidden');
+        document.getElementById('translated-text').textContent = translated;
+    } else {
+        document.getElementById('translation-box').classList.add('hidden');
+    }
+}
+
+function smartTranslateDesc() {
+    const azText = document.getElementById('prod-desc-az').value;
+    if (!azText || !document.getElementById('auto-translate-enabled')?.checked) {
+        document.getElementById('desc-translation-box').classList.add('hidden');
+        return;
+    }
+    
+    const translated = translateAzToEn(azText);
+    
+    if (translated && translated !== azText) {
+        document.getElementById('desc-translation-box').classList.remove('hidden');
+        document.getElementById('translated-desc').textContent = translated;
+    } else {
+        document.getElementById('desc-translation-box').classList.add('hidden');
+    }
+}
+
 function translateAzToEn(text) {
-    if (!document.getElementById('auto-translate-enabled')?.checked) return text;
     if (!text) return '';
     
     let translated = text.toLowerCase();
+    let words = translated.split(/\s+/);
+    let resultWords = [];
     
-    for (let [az, en] of Object.entries(translationDict)) {
-        const regex = new RegExp(`\\b${az}\\b`, 'gi');
-        translated = translated.replace(regex, en);
+    // Sözləri tərcümə et
+    for (let word of words) {
+        let translatedWord = translationDict[word] || word;
+        
+        // Böyük hərf ilə başlayırsa
+        if (word[0] === word[0].toUpperCase()) {
+            translatedWord = translatedWord.charAt(0).toUpperCase() + translatedWord.slice(1);
+        }
+        
+        resultWords.push(translatedWord);
     }
     
-    return translated.replace(/\b\w/g, l => l.toUpperCase());
+    // Nəticəni birləşdir
+    let result = resultWords.join(' ');
+    
+    // Bəzi düzəlişlər
+    result = result.replace(/i̇/g, 'i'); // Türkçə i problemi
+    
+    return result;
 }
 
-// Login funksiyaları
+// ============================================
+// AVAILABILITY TOGGLE
+// ============================================
+
+document.getElementById('prod-available')?.addEventListener('change', function() {
+    const label = document.getElementById('availability-label');
+    if (this.checked) {
+        label.textContent = 'Mövcuddur';
+        label.classList.remove('text-red-600');
+        label.classList.add('text-green-600');
+    } else {
+        label.textContent = 'Bitdi';
+        label.classList.remove('text-green-600');
+        label.classList.add('text-red-600');
+    }
+});
+
+// ============================================
+// SYNC FUNKSİYALARI
+// ============================================
+
+function debouncedSync() {
+    if (!CONFIG.AUTO_SYNC) return;
+    
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+        syncToGoogleSheets();
+    }, CONFIG.SYNC_DELAY);
+}
+
+async function syncToGoogleSheets() {
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
+        console.log('GAS_URL konfiqurasiya edilməyib');
+        return;
+    }
+    
+    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
+    
+    const data = {
+        categories: categories,
+        products: products,
+        orders: orders,
+        tables: tables,
+        reservations: reservations,
+        settings: settings
+    };
+    
+    try {
+        await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        showSyncIndicator('Sinxronizasiya edildi!', 'success');
+        showSyncBadge();
+        
+        setTimeout(() => {
+            hideSyncIndicator();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Sync error:', error);
+        showSyncIndicator('Sinxronizasiya xətası!', 'error');
+        setTimeout(hideSyncIndicator, 3000);
+    }
+}
+
+function showSyncIndicator(text, type) {
+    const indicator = document.getElementById('sync-indicator');
+    const textEl = document.getElementById('sync-text');
+    
+    indicator.className = `sync-indicator sync-${type}`;
+    textEl.textContent = text;
+    indicator.classList.remove('hidden');
+}
+
+function hideSyncIndicator() {
+    document.getElementById('sync-indicator').classList.add('hidden');
+}
+
+function showSyncBadge() {
+    const badge = document.getElementById('sync-status-badge');
+    badge.classList.remove('hidden');
+    setTimeout(() => {
+        badge.classList.add('hidden');
+    }, 3000);
+}
+
+// ============================================
+// LOGO FUNKSİYALARI
+// ============================================
+
+function handleLogoUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentLogo = e.target.result;
+            document.getElementById('logo-image').src = currentLogo;
+            document.getElementById('logo-image').classList.remove('hidden');
+            document.getElementById('logo-placeholder').classList.add('hidden');
+            
+            settings.logo = currentLogo;
+            localStorage.setItem('settings', JSON.stringify(settings));
+            debouncedSync();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeLogo() {
+    currentLogo = null;
+    document.getElementById('logo-image').classList.add('hidden');
+    document.getElementById('logo-placeholder').classList.remove('hidden');
+    document.getElementById('logo-image').src = '';
+    
+    settings.logo = null;
+    localStorage.setItem('settings', JSON.stringify(settings));
+    debouncedSync();
+}
+
+// ============================================
+// LOGIN FUNKSİYALARI
+// ============================================
+
 function togglePassword() {
     const input = document.getElementById('password');
     const icon = document.getElementById('eye-icon');
@@ -857,7 +1123,10 @@ function logout() {
     document.getElementById('login-error').classList.add('hidden');
 }
 
-// Naviqasiya
+// ============================================
+// NAVİQASİYA
+// ============================================
+
 function showPage(pageName) {
     if (event) event.preventDefault();
     
@@ -915,58 +1184,16 @@ function showPage(pageName) {
     }
 }
 
-// Tərcümə funksiyaları
-function translateAndUpdate() {
-    const azText = document.getElementById('prod-name-az').value;
-    const translated = translateAzToEn(azText);
-    
-    const box = document.getElementById('translation-box');
-    const textSpan = document.getElementById('translated-text');
-    
-    if (azText && translated && translated !== azText) {
-        box.classList.remove('hidden');
-        textSpan.textContent = translated;
-    } else {
-        box.classList.add('hidden');
-    }
-}
+// ============================================
+// PRODUCT FUNKSİYALARI
+// ============================================
 
-function translateDesc() {
-    const azText = document.getElementById('prod-desc-az').value;
-    const translated = translateAzToEn(azText);
-    
-    const box = document.getElementById('desc-translation-box');
-    const textSpan = document.getElementById('translated-desc');
-    
-    if (azText && translated && translated !== azText) {
-        box.classList.remove('hidden');
-        textSpan.textContent = translated;
-    } else {
-        box.classList.add('hidden');
-    }
-}
-
-function translateCategoryName() {
-    const azText = document.getElementById('cat-name-az').value;
-    const translated = translateAzToEn(azText);
-    
-    const box = document.getElementById('cat-translation-box');
-    const textSpan = document.getElementById('cat-translated-text');
-    
-    if (azText && translated && translated !== azText) {
-        box.classList.remove('hidden');
-        textSpan.textContent = translated;
-    } else {
-        box.classList.add('hidden');
-    }
-}
-
-// Product Modal
 function openProductModal(productId = null) {
     editingProductId = productId;
     currentProductImages = [];
     document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
     
+    // Reset form
     document.getElementById('prod-name-az').value = '';
     document.getElementById('translation-box').classList.add('hidden');
     document.getElementById('prod-desc-az').value = '';
@@ -975,9 +1202,13 @@ function openProductModal(productId = null) {
     document.getElementById('prod-price').value = '';
     document.getElementById('prod-popular').checked = false;
     document.getElementById('prod-new').checked = false;
-    document.getElementById('prod-active').checked = true;
+    document.getElementById('prod-available').checked = true;
+    document.getElementById('availability-label').textContent = 'Mövcuddur';
+    document.getElementById('availability-label').classList.remove('text-red-600');
+    document.getElementById('availability-label').classList.add('text-green-600');
     document.getElementById('image-preview').innerHTML = '';
     
+    // Update category select
     const catSelect = document.getElementById('prod-category');
     catSelect.innerHTML = '<option value="">Seçin...</option>';
     categories.forEach(cat => {
@@ -993,14 +1224,27 @@ function openProductModal(productId = null) {
             document.getElementById('prod-price').value = product.price;
             document.getElementById('prod-popular').checked = product.popular || false;
             document.getElementById('prod-new').checked = product.isNew || false;
-            document.getElementById('prod-active').checked = product.active !== false;
+            document.getElementById('prod-available').checked = product.available !== false;
+            
+            // Update availability label
+            const availLabel = document.getElementById('availability-label');
+            if (product.available === false) {
+                availLabel.textContent = 'Bitdi';
+                availLabel.classList.remove('text-green-600');
+                availLabel.classList.add('text-red-600');
+            }
+            
             currentProductImages = product.images || [];
             renderImagePreview();
             
-            const translated = translateAzToEn(product.nameAz);
-            if (translated !== product.nameAz) {
+            // Show translations
+            if (product.nameEn) {
                 document.getElementById('translation-box').classList.remove('hidden');
-                document.getElementById('translated-text').textContent = translated;
+                document.getElementById('translated-text').textContent = product.nameEn;
+            }
+            if (product.descEn) {
+                document.getElementById('desc-translation-box').classList.remove('hidden');
+                document.getElementById('translated-desc').textContent = product.descEn;
             }
         }
     }
@@ -1021,6 +1265,7 @@ function saveProduct() {
     const descEn = translateAzToEn(descAz);
     const categoryId = parseInt(document.getElementById('prod-category').value);
     const price = parseFloat(document.getElementById('prod-price').value);
+    const available = document.getElementById('prod-available').checked;
     
     if (!nameAz || !categoryId || !price) {
         alert('Zəhmət olmasa bütün vacib xanaları doldurun!');
@@ -1039,7 +1284,7 @@ function saveProduct() {
         images: currentProductImages,
         popular: document.getElementById('prod-popular').checked,
         isNew: document.getElementById('prod-new').checked,
-        active: document.getElementById('prod-active').checked,
+        available: available,
         createdAt: editingProductId ? products.find(p => p.id === editingProductId)?.createdAt : new Date().toISOString()
     };
     
@@ -1054,7 +1299,7 @@ function saveProduct() {
     closeProductModal();
     renderProducts();
     updateStats();
-    showSyncStatus('Məhsul yadda saxlanıldı!', 'success');
+    debouncedSync();
 }
 
 function renderProducts() {
@@ -1077,35 +1322,53 @@ function renderProducts() {
     
     grid.innerHTML = filtered.map(product => {
         const category = categories.find(c => c.id === product.categoryId);
-        const mainImage = product.images?.[0] || 'https://via.placeholder.com/400x300?text=No+Image';
+        
+        // Şəkilləri göstər - bütün şəkillər grid şəklində
+        let imagesHtml = '';
+        if (product.images && product.images.length > 0) {
+            imagesHtml = '<div class="product-image-grid mt-3">';
+            product.images.forEach((img, idx) => {
+                imagesHtml += `<img src="${img}" alt="${product.nameAz} ${idx + 1}" class="hover:opacity-80 transition-opacity cursor-pointer" onclick="event.stopPropagation(); viewImage('${img}')">`;
+            });
+            imagesHtml += '</div>';
+        } else {
+            imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
+        }
+        
         const badges = [];
         if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-star text-xs"></i> Populyar</span>');
         if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-leaf text-xs"></i> Yeni</span>');
         
+        // Availability status
+        const availBadge = product.available !== false 
+            ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
+            : '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
+        
         return `
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover group">
-                <div class="relative h-48 overflow-hidden">
-                    <img src="${mainImage}" alt="${product.nameAz}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                    <div class="absolute top-3 left-3 flex gap-2 flex-wrap">
-                        ${badges.join('')}
-                    </div>
-                    ${product.images?.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">+${product.images.length - 1}</div>` : ''}
-                </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover group ${product.available === false ? 'opacity-75' : ''}">
                 <div class="p-5">
-                    <h4 class="font-semibold text-gray-800 mb-1">${product.nameAz}</h4>
-                    <p class="text-xs text-gray-500 mb-1">${product.nameEn}</p>
-                    <p class="text-lg font-bold text-gray-800 mb-3">${product.price}₼</p>
-                    <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-                        <span class="text-xs text-gray-500">${category?.nameAz || 'Kateqoriya yoxdur'}</span>
-                        <span class="status-badge ${product.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
-                            ${product.active !== false ? 'Aktiv' : 'Deaktiv'}
-                        </span>
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex gap-2 flex-wrap">
+                            ${badges.join('')}
+                            ${availBadge}
+                        </div>
+                        <span class="text-lg font-bold text-gray-800">${product.price}₼</span>
                     </div>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="openProductModal(${product.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                    
+                    <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${product.nameAz}</h4>
+                    <p class="text-xs text-gray-500 mb-1">${product.nameEn}</p>
+                    <p class="text-xs text-gray-400 mb-3">${category?.nameAz || 'Kateqoriya yoxdur'}</p>
+                    
+                    ${imagesHtml}
+                    
+                    <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                        <button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg hover:opacity-80 transition-colors text-sm font-medium">
+                            ${product.available !== false ? '<i class="fas fa-times-circle mr-1"></i> Bitdi' : '<i class="fas fa-check-circle mr-1"></i> Mövcud'}
+                        </button>
+                        <button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deleteProduct(${product.id})" class="flex-1 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm">
+                        <button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1113,6 +1376,30 @@ function renderProducts() {
             </div>
         `;
     }).join('');
+}
+
+function toggleProductAvailability(productId) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        product.available = product.available === false ? true : false;
+        localStorage.setItem('products', JSON.stringify(products));
+        renderProducts();
+        debouncedSync();
+    }
+}
+
+function viewImage(src) {
+    // Şəkil böyütme modalı
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
+        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
 }
 
 function updateCategoryFilter() {
@@ -1133,10 +1420,14 @@ function deleteProduct(id) {
         localStorage.setItem('products', JSON.stringify(products));
         renderProducts();
         updateStats();
+        debouncedSync();
     }
 }
 
-// Şəkil funksiyaları
+// ============================================
+// ŞƏKİL FUNKSİYALARI
+// ============================================
+
 function handleDragOver(e) {
     e.preventDefault();
     e.currentTarget.classList.add('dragover');
@@ -1168,9 +1459,9 @@ function handleFiles(files) {
 function renderImagePreview() {
     const container = document.getElementById('image-preview');
     container.innerHTML = currentProductImages.map((img, index) => `
-        <div class="image-item">
-            <img src="${img}" alt="Preview">
-            <button type="button" class="remove-btn" onclick="removeImage(${index})">
+        <div class="image-item" onclick="viewImage('${img}')">
+            <img src="${img}" alt="Preview ${index + 1}">
+            <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -1182,7 +1473,10 @@ function removeImage(index) {
     renderImagePreview();
 }
 
-// Kateqoriya funksiyaları
+// ============================================
+// KATEQORİYA FUNKSİYALARI
+// ============================================
+
 function openCategoryModal(categoryId = null) {
     editingCategoryId = categoryId;
     document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
@@ -1259,7 +1553,7 @@ function saveCategory() {
     closeCategoryModal();
     renderCategories();
     updateStats();
-    showSyncStatus('Kateqoriya yadda saxlanıldı!', 'success');
+    debouncedSync();
 }
 
 function renderCategories() {
@@ -1289,7 +1583,25 @@ function filterCategories() {
     renderCategories();
 }
 
-// Masa funksiyaları
+function translateCategoryName() {
+    const azText = document.getElementById('cat-name-az').value;
+    const translated = translateAzToEn(azText);
+    
+    const box = document.getElementById('cat-translation-box');
+    const textSpan = document.getElementById('cat-translated-text');
+    
+    if (azText && translated && translated !== azText) {
+        box.classList.remove('hidden');
+        textSpan.textContent = translated;
+    } else {
+        box.classList.add('hidden');
+    }
+}
+
+// ============================================
+// MASA FUNKSİYALARI
+// ============================================
+
 function openTableModal(tableId = null) {
     editingTableId = tableId;
     document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
@@ -1334,7 +1646,7 @@ function saveTable() {
         capacity: capacity,
         location: location,
         qrUrl: qrUrl,
-        status: 'empty', // empty, occupied, reserved
+        status: 'empty',
         createdAt: editingTableId ? tables.find(t => t.id === editingTableId)?.createdAt : new Date().toISOString()
     };
     
@@ -1349,7 +1661,7 @@ function saveTable() {
     closeTableModal();
     renderTables();
     updateStats();
-    showSyncStatus('Masa yaradıldı! QR kod hazırdır.', 'success');
+    debouncedSync();
 }
 
 function renderTables() {
@@ -1412,10 +1724,14 @@ function deleteTable(id) {
         localStorage.setItem('tables', JSON.stringify(tables));
         renderTables();
         updateStats();
+        debouncedSync();
     }
 }
 
-// QR Kod funksiyaları
+// ============================================
+// QR KOD FUNKSİYALARI
+// ============================================
+
 function showQRCode(tableId) {
     const table = tables.find(t => t.id === tableId);
     if (!table) return;
@@ -1474,18 +1790,24 @@ function printQR() {
     }
 }
 
-// Rezervasiya funksiyaları
+// ============================================
+// REZERVASİYA FUNKSİYALARI
+// ============================================
+
 function openReservationModal(reservationId = null) {
-    // Populate table select
     const tableSelect = document.getElementById('res-table');
     tableSelect.innerHTML = '<option value="">Seçin...</option>';
     tables.forEach(table => {
         tableSelect.innerHTML += `<option value="${table.id}">Masa ${table.number} (${table.capacity} nəfər)</option>`;
     });
     
-    // Set default date to today
     document.getElementById('res-date').valueAsDate = new Date();
     document.getElementById('res-time').value = '19:00';
+    document.getElementById('res-customer').value = '';
+    document.getElementById('res-phone').value = '';
+    document.getElementById('res-guests').value = '2';
+    document.getElementById('res-table').value = '';
+    document.getElementById('res-notes').value = '';
     
     document.getElementById('reservation-modal').classList.add('active');
 }
@@ -1529,7 +1851,7 @@ function saveReservation() {
     
     closeReservationModal();
     renderReservations();
-    showSyncStatus('Rezervasiya yaradıldı!', 'success');
+    debouncedSync();
 }
 
 function renderReservations() {
@@ -1591,6 +1913,7 @@ function confirmReservation(id) {
         res.status = 'confirmed';
         localStorage.setItem('reservations', JSON.stringify(reservations));
         renderReservations();
+        debouncedSync();
     }
 }
 
@@ -1600,17 +1923,21 @@ function cancelReservation(id) {
         res.status = 'cancelled';
         localStorage.setItem('reservations', JSON.stringify(reservations));
         renderReservations();
+        debouncedSync();
     }
 }
 
-// Sifariş funksiyaları
+// ============================================
+// SİFARİŞ FUNKSİYALARI
+// ============================================
+
 function renderOrders() {
     const container = document.getElementById('orders-list');
     const search = document.getElementById('order-search')?.value.toLowerCase() || '';
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
     
     let filtered = orders.filter(o => {
-        const matchesSearch = o.customer?.toLowerCase().includes(search) || o.id?.toLowerCase().includes(search);
+        const matchesSearch = o.customer?.toLowerCase().includes(search) || o.id?.toString().includes(search);
         const matchesStatus = !statusFilter || o.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -1628,13 +1955,13 @@ function renderOrders() {
             'active': { badge: 'bg-blue-100 text-blue-700', icon: 'fa-spinner', text: 'Aktiv' },
             'completed': { badge: 'bg-green-100 text-green-700', icon: 'fa-check-circle', text: 'Tamamlandı' }
         };
-        const style = statusColors[order.status];
+        const style = statusColors[order.status] || statusColors['pending'];
         
         return `
             <div class="bg-white rounded-2xl p-6 shadow-sm card-hover ${order.status === 'pending' ? 'border-2 border-yellow-100' : ''}">
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center gap-3">
-                        <span class="font-bold text-gray-800">${order.id || 'ORD-' + order.id}</span>
+                        <span class="font-bold text-gray-800">${order.id || 'ORD-' + Date.now().toString().slice(-6)}</span>
                         <span class="status-badge ${style.badge} flex items-center gap-1">
                             <i class="fas ${style.icon} text-xs"></i> ${style.text}
                         </span>
@@ -1664,69 +1991,12 @@ function filterOrders() {
     renderOrders();
 }
 
-// Sync funksiyaları
-async function syncAllData() {
-    const gasUrl = document.getElementById('gas-url')?.value || GAS_URL;
-    
-    if (!gasUrl || gasUrl === 'https://script.google.com/macros/s/AKfycbxXXXXXXXXXXXXXXXXXXXXXXXX/exec') {
-        alert('Zəhmət olmasa öncə Parametrlər səhifəsində Google Apps Script URL-ni daxil edin!');
-        showPage('settings');
-        return;
-    }
-    
-    showSyncStatus('Excel-ə yazılır...', 'loading');
-    
-    const data = {
-        categories: categories,
-        products: products,
-        orders: orders,
-        tables: tables,
-        reservations: reservations,
-        settings: {
-            nameAz: document.getElementById('rest-name-az')?.value || '',
-            nameEn: document.getElementById('rest-name-en')?.value || '',
-            phone: document.getElementById('rest-phone')?.value || '',
-            email: document.getElementById('rest-email')?.value || '',
-            facebook: document.getElementById('social-facebook')?.value || '',
-            instagram: document.getElementById('social-instagram')?.value || '',
-            whatsapp: document.getElementById('social-whatsapp')?.value || ''
-        }
-    };
-    
-    try {
-        const response = await fetch(gasUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-        
-        showSyncStatus('Məlumatlar Excel-ə yazıldı!', 'success');
-        setTimeout(() => hideSyncStatus(), 3000);
-    } catch (error) {
-        console.error('Sync error:', error);
-        showSyncStatus('Xəta baş verdi!', 'error');
-        setTimeout(() => hideSyncStatus(), 3000);
-    }
-}
+// ============================================
+// PARAMETRLƏR
+// ============================================
 
-function showSyncStatus(message, type) {
-    const statusEl = document.getElementById('sync-status');
-    statusEl.textContent = message;
-    statusEl.className = `sync-status sync-${type}`;
-    statusEl.classList.remove('hidden');
-}
-
-function hideSyncStatus() {
-    document.getElementById('sync-status').classList.add('hidden');
-}
-
-// Parametrlər
-function saveSettings() {
-    const settings = {
-        gasUrl: document.getElementById('gas-url').value,
+function autoSaveSettings() {
+    settings = {
         nameAz: document.getElementById('rest-name-az').value,
         nameEn: document.getElementById('rest-name-en').value,
         phone: document.getElementById('rest-phone').value,
@@ -1734,17 +2004,17 @@ function saveSettings() {
         facebook: document.getElementById('social-facebook').value,
         instagram: document.getElementById('social-instagram').value,
         whatsapp: document.getElementById('social-whatsapp').value,
-        autoTranslate: document.getElementById('auto-translate-enabled').checked
+        autoTranslate: document.getElementById('auto-translate-enabled').checked,
+        logo: currentLogo
     };
     
     localStorage.setItem('settings', JSON.stringify(settings));
-    showSyncStatus('Parametrlər yadda saxlanıldı!', 'success');
+    debouncedSync();
 }
 
 function loadSettings() {
     const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
     
-    if (savedSettings.gasUrl) document.getElementById('gas-url').value = savedSettings.gasUrl;
     if (savedSettings.nameAz) document.getElementById('rest-name-az').value = savedSettings.nameAz;
     if (savedSettings.nameEn) document.getElementById('rest-name-en').value = savedSettings.nameEn;
     if (savedSettings.phone) document.getElementById('rest-phone').value = savedSettings.phone;
@@ -1755,70 +2025,147 @@ function loadSettings() {
     if (savedSettings.autoTranslate !== undefined) {
         document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
     }
+    
+    if (savedSettings.logo) {
+        currentLogo = savedSettings.logo;
+        document.getElementById('logo-image').src = currentLogo;
+        document.getElementById('logo-image').classList.remove('hidden');
+        document.getElementById('logo-placeholder').classList.add('hidden');
+    }
 }
 
-// Statistikalar
+// ============================================
+// STATİSTİKA VƏ CHART
+// ============================================
+
 function updateStats() {
     document.getElementById('stat-products').textContent = products.length;
     document.getElementById('stat-categories').textContent = categories.length;
     document.getElementById('stat-tables').textContent = tables.length;
     document.getElementById('order-badge').textContent = orders.filter(o => o.status === 'pending').length;
     
+    const today = new Date().toDateString();
     const todayRevenue = orders
-        .filter(o => o.status === 'completed' && new Date(o.createdAt).toDateString() === new Date().toDateString())
-        .reduce((sum, o) => sum + (o.total || 0), 0);
+        .filter(o => o.status === 'completed' && new Date(o.createdAt).toDateString() === today)
+        .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
     document.getElementById('stat-revenue').textContent = todayRevenue.toFixed(2) + '₼';
 }
 
 function updateDashboard() {
+    // Son sifarişlər
     const recentOrders = orders.slice(-3).reverse();
     const container = document.getElementById('recent-orders-list');
     
     if (recentOrders.length === 0) {
         container.innerHTML = '<p class="text-gray-500 text-sm">Hələ sifariş yoxdur</p>';
-        return;
+    } else {
+        container.innerHTML = recentOrders.map(order => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                    <p class="font-medium text-sm text-gray-800">${order.customer}</p>
+                    <p class="text-xs text-gray-500">${order.table}</p>
+                </div>
+                <span class="font-bold text-sm text-gray-800">${order.total}₼</span>
+            </div>
+        `).join('');
     }
     
-    container.innerHTML = recentOrders.map(order => `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div>
-                <p class="font-medium text-sm text-gray-800">${order.customer}</p>
-                <p class="text-xs text-gray-500">${order.table}</p>
-            </div>
-            <span class="font-bold text-sm text-gray-800">${order.total}₼</span>
-        </div>
-    `).join('');
-}
-
-// Chart initialization
-function initCharts() {
-    const ctx = document.getElementById('weeklyOrdersChart');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
-                datasets: [{
-                    label: 'Sifarişlər',
-                    data: [12, 19, 15, 25, 22, 30, 28],
-                    backgroundColor: '#064e3b',
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
+    // Populyar məhsullar
+    const popularContainer = document.getElementById('popular-products-grid');
+    const popularProducts = products.filter(p => p.popular).slice(0, 3);
+    
+    if (popularProducts.length === 0) {
+        popularContainer.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">Populyar məhsul yoxdur</div>';
+    } else {
+        popularContainer.innerHTML = popularProducts.map(p => {
+            const img = p.images?.[0] || 'https://via.placeholder.com/300x200?text=No+Image';
+            return `
+                <div class="bg-gray-50 rounded-xl p-4 flex gap-4 items-center">
+                    <img src="${img}" class="w-20 h-20 object-cover rounded-lg">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">${p.nameAz}</h4>
+                        <p class="text-sm text-gray-500">${p.price}₼</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 }
 
-// Başlatma
+function initCharts() {
+    const ctx = document.getElementById('weeklyOrdersChart');
+    if (!ctx) return;
+    
+    // Gradient yarat
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(5, 150, 105, 0.8)');
+    gradient.addColorStop(1, 'rgba(5, 150, 105, 0.1)');
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
+            datasets: [{
+                label: 'Sifarişlər',
+                data: [12, 19, 15, 25, 22, 30, 28],
+                backgroundColor: gradient,
+                borderColor: '#059669',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0a1f0a',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return 'Sifarişlər: ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: { family: 'Inter', size: 11 },
+                        color: '#6b7280'
+                    }
+                },
+                x: {
+                    grid: { display: false, drawBorder: false },
+                    ticks: {
+                        font: { family: 'Inter', size: 11 },
+                        color: '#6b7280'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// BAŞLATMA
+// ============================================
+
 function initApp() {
     updateStats();
     renderCategories();
@@ -1829,12 +2176,7 @@ function initApp() {
     updateCategoryFilter();
     updateDashboard();
     initCharts();
-    
-    // Load saved settings
-    const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
-    if (savedSettings.gasUrl) {
-        GAS_URL = savedSettings.gasUrl;
-    }
+    loadSettings();
 }
 
 // Modal bağlama
@@ -1846,5 +2188,4 @@ window.onclick = function(event) {
 </script>
 
 </body>
-
 </html>
