@@ -59,6 +59,8 @@
         .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
         .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         @media (max-width: 768px) { .specs-grid { grid-template-columns: 1fr; } }
+        .progress-bar { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+        .progress-bar-fill { height: 100%; background: #10b981; transition: width 0.3s; }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -530,11 +532,11 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-facebook text-blue-600 mr-1"></i> Facebook</label>
-                                    <input type="text" id="social-facebook" placeholder="https://facebook.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
+                                    <input type="text" id="social-facebook" placeholder="https://facebook.com/ ..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-instagram text-pink-600 mr-1"></i> Instagram</label>
-                                    <input type="text" id="social-instagram" placeholder="https://instagram.com/..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
+                                    <input type="text" id="social-instagram" placeholder="https://instagram.com/ ..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-whatsapp text-green-600 mr-1"></i> WhatsApp</label>
@@ -567,7 +569,6 @@
         </main>
     </div>
 </div>
-
 <div id="product-modal" class="modal">
     <div class="modal-content">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
@@ -650,6 +651,15 @@
                     <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
                 </div>
                 <div id="image-preview" class="image-gallery mt-4"></div>
+                <div id="upload-progress" class="hidden mt-2">
+                    <div class="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Yüklənir...</span>
+                        <span id="upload-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center gap-6 flex-wrap">
@@ -837,13 +847,28 @@
         </div>
     </div>
 </div>
-
 <script>
+// =============================================================================
+// KONFIQURASIYA - BURA ÖZ MƏLUMATLARINI YAZ
+// =============================================================================
+
 const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxvkYs_MLWIH3WYYymL_wWjAGN7VmosXIcJ2pnPE6xr3HF55kLgmq9Wz3DhQzO9ygXUcA/exec',
+    // Google Apps Script URL (Code.gs deploy edildikdən sonra alınan URL)
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbyxFzMeb49MzbNO2Atx9-MOGfU1IDqog9W0omTCXb-yP4T9tGcFkhtSCVC3Y5IZlegRww/exec',
+    
+    // Google Drive Folder ID (şəkillər üçün)
+    DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
+    
+    // Google Sheet ID (məlumatlar üçün)
+    SHEET_ID: '1S1TJ7FVqqsiIc07NeJMz9TcCrmpHSHyjHGEuoO4eCoM',
+    
     AUTO_SYNC: true,
     SYNC_DELAY: 2000
 };
+
+// =============================================================================
+// GLOBAL DƏYİŞƏNLƏR
+// =============================================================================
 
 let categories = JSON.parse(localStorage.getItem('categories')) || [];
 let products = JSON.parse(localStorage.getItem('products')) || [];
@@ -860,10 +885,13 @@ let currentQRTable = null;
 let syncTimeout = null;
 let currentLogo = null;
 let currentHeroImage = null;
-
 let productTranslateTimer = null;
 let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
+
+// =============================================================================
+// KÖMƏKÇİ FUNKSİYALAR
+// =============================================================================
 
 function escapeHtml(value = '') {
     return String(value)
@@ -873,6 +901,124 @@ function escapeHtml(value = '') {
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
 }
+
+function showSyncIndicator(text, type) {
+    const indicator = document.getElementById('sync-indicator');
+    const textEl = document.getElementById('sync-text');
+    indicator.className = `sync-indicator sync-${type}`;
+    textEl.textContent = text;
+    indicator.classList.remove('hidden');
+}
+
+function hideSyncIndicator() {
+    document.getElementById('sync-indicator').classList.add('hidden');
+}
+
+function showSyncBadge() {
+    const badge = document.getElementById('sync-status-badge');
+    badge.classList.remove('hidden');
+    setTimeout(() => badge.classList.add('hidden'), 3000);
+}
+
+// =============================================================================
+// GOOGLE DRIVE ŞƏKİL YÜKLƏMƏ
+// =============================================================================
+
+async function uploadImageToDrive(base64Image, fileName) {
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
+        console.log('GAS_URL not configured, using local storage');
+        return base64Image;
+    }
+
+    try {
+        showSyncIndicator('Şəkil yüklənir...', 'loading');
+
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'uploadImage',
+                image: base64Image,
+                fileName: fileName || `product_${Date.now()}.jpg`,
+                folderId: CONFIG.DRIVE_FOLDER_ID
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSyncIndicator('Şəkil yükləndi!', 'success');
+            setTimeout(hideSyncIndicator, 2000);
+            return result.directUrl || result.thumbnailUrl;
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        showSyncIndicator('Şəkil yüklənmədi!', 'error');
+        setTimeout(hideSyncIndicator, 3000);
+        return base64Image; // Fallback to base64
+    }
+}
+
+// =============================================================================
+// GOOGLE SHEETS SINXRONIZASIYA
+// =============================================================================
+
+async function syncToGoogleSheets() {
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
+        console.log('GAS_URL not configured, skipping sync');
+        return;
+    }
+
+    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
+
+    const data = {
+        categories: categories,
+        products: products,
+        orders: orders,
+        tables: tables,
+        reservations: reservations,
+        settings: settings
+    };
+
+    try {
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'syncData',
+                data: JSON.stringify(data)
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSyncIndicator('Sinxronizasiya edildi!', 'success');
+            showSyncBadge();
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        showSyncIndicator('Sinxronizasiya xətası!', 'error');
+    }
+    
+    setTimeout(hideSyncIndicator, 2000);
+}
+
+function debouncedSync() {
+    if (!CONFIG.AUTO_SYNC) return;
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+        syncToGoogleSheets();
+    }, CONFIG.SYNC_DELAY);
+}
+
+// =============================================================================
+// TƏRCÜMƏ FUNKSİYALARI
+// =============================================================================
 
 async function translateViaAppsScript(text, source, target) {
     if (!text || !text.trim()) return '';
@@ -897,19 +1043,16 @@ function handleProductFieldInput(fieldType, lang, value) {
 
     productTranslateTimer = setTimeout(async () => {
         const cleanValue = (value || '').trim();
-
         const targetIdMap = {
             name: { az: 'prod-name-en', en: 'prod-name-az' },
             desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
         };
 
-        const sourceLang = lang;
         const targetLang = lang === 'az' ? 'en' : 'az';
         const targetElementId = targetIdMap[fieldType][lang];
         const targetElement = document.getElementById(targetElementId);
 
         if (!targetElement) return;
-
         if (!cleanValue) {
             isProductAutoTranslating = true;
             targetElement.value = '';
@@ -918,7 +1061,7 @@ function handleProductFieldInput(fieldType, lang, value) {
         }
 
         isProductAutoTranslating = true;
-        const translatedText = await translateViaAppsScript(cleanValue, sourceLang, targetLang);
+        const translatedText = await translateViaAppsScript(cleanValue, lang, targetLang);
         if (translatedText) targetElement.value = translatedText;
         isProductAutoTranslating = false;
     }, 500);
@@ -945,106 +1088,9 @@ function translateCategoryName() {
     }, 400);
 }
 
-document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'prod-available') {
-        const label = document.getElementById('availability-label');
-        if (e.target.checked) {
-            label.textContent = 'Mövcuddur';
-            label.classList.remove('text-red-600');
-            label.classList.add('text-green-600');
-        } else {
-            label.textContent = 'Bitdi';
-            label.classList.remove('text-green-600');
-            label.classList.add('text-red-600');
-        }
-    }
-});
-
-function debouncedSync() {
-    if (!CONFIG.AUTO_SYNC) return;
-    clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
-        syncToGoogleSheets();
-    }, CONFIG.SYNC_DELAY);
-}
-
-async function syncToGoogleSheets() {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) return;
-
-    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
-
-    const data = { categories, products, orders, tables, reservations, settings };
-
-    try {
-        await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        showSyncIndicator('Sinxronizasiya edildi!', 'success');
-        showSyncBadge();
-        setTimeout(hideSyncIndicator, 2000);
-    } catch (error) {
-        console.error('Sync error:', error);
-        showSyncIndicator('Sinxronizasiya xətası!', 'error');
-        setTimeout(hideSyncIndicator, 3000);
-    }
-}
-
-function showSyncIndicator(text, type) {
-    const indicator = document.getElementById('sync-indicator');
-    const textEl = document.getElementById('sync-text');
-    indicator.className = `sync-indicator sync-${type}`;
-    textEl.textContent = text;
-    indicator.classList.remove('hidden');
-}
-
-function hideSyncIndicator() {
-    document.getElementById('sync-indicator').classList.add('hidden');
-}
-
-function showSyncBadge() {
-    const badge = document.getElementById('sync-status-badge');
-    badge.classList.remove('hidden');
-    setTimeout(() => badge.classList.add('hidden'), 3000);
-}
-
-async function uploadImageToDrive(base64Image, fileName) {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) return null;
-
-    try {
-        showSyncIndicator('Şəkil yüklənir...', 'loading');
-
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'uploadImage',
-                image: base64Image,
-                fileName: fileName || `image_${Date.now()}.jpg`,
-                mimeType: 'image/jpeg',
-                folderId: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_'
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showSyncIndicator('Şəkil yükləndi!', 'success');
-            setTimeout(hideSyncIndicator, 2000);
-            return result.directUrl || result.thumbnailUrl;
-        } else {
-            throw new Error(result.error);
-        }
-    } catch (error) {
-        console.error('Upload error:', error);
-        showSyncIndicator('Şəkil yüklənmədi!', 'error');
-        setTimeout(hideSyncIndicator, 3000);
-        return null;
-    }
-}
+// =============================================================================
+// AUTHENTIFIKASIYA
+// =============================================================================
 
 function togglePassword() {
     const input = document.getElementById('password');
@@ -1080,6 +1126,10 @@ function logout() {
     document.getElementById('password').value = '';
     document.getElementById('login-error').classList.add('hidden');
 }
+
+// =============================================================================
+// SƏHİFƏ İDARƏETMƏ
+// =============================================================================
 
 function showPage(pageName) {
     document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
@@ -1128,12 +1178,16 @@ function showPage(pageName) {
         loadSettings();
     }
 }
+    // =============================================================================
+// MƏHSUL FUNKSİYALARI
+// =============================================================================
 
 function openProductModal(productId = null) {
     editingProductId = productId;
     currentProductImages = [];
     document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
 
+    // Reset fields
     document.getElementById('prod-name-az').value = '';
     document.getElementById('prod-name-en').value = '';
     document.getElementById('prod-desc-az').value = '';
@@ -1152,12 +1206,14 @@ function openProductModal(productId = null) {
     document.getElementById('availability-label').classList.add('text-green-600');
     document.getElementById('image-preview').innerHTML = '';
 
+    // Fill categories
     const catSelect = document.getElementById('prod-category');
     catSelect.innerHTML = '<option value="">Seçin...</option>';
     categories.forEach(cat => {
         catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
     });
 
+    // Edit mode
     if (productId) {
         const product = products.find(p => p.id === productId);
         if (product) {
@@ -1210,15 +1266,29 @@ async function saveProduct() {
         return;
     }
 
+    // Show progress
+    const progressDiv = document.getElementById('upload-progress');
+    progressDiv.classList.remove('hidden');
+    
+    // Upload images to Drive
     const uploadedImages = [];
-    for (let img of currentProductImages) {
+    const totalImages = currentProductImages.length;
+    
+    for (let i = 0; i < currentProductImages.length; i++) {
+        const img = currentProductImages[i];
+        const percent = Math.round(((i + 1) / totalImages) * 100);
+        document.getElementById('upload-percent').textContent = percent + '%';
+        document.getElementById('progress-fill').style.width = percent + '%';
+        
         if (img.startsWith('data:')) {
-            const url = await uploadImageToDrive(img, `product_${Date.now()}.jpg`);
+            const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
             uploadedImages.push(url || img);
         } else {
             uploadedImages.push(img);
         }
     }
+    
+    progressDiv.classList.add('hidden');
 
     const productData = {
         id: editingProductId || Date.now(),
@@ -1250,11 +1320,13 @@ async function saveProduct() {
     }
 
     localStorage.setItem('products', JSON.stringify(products));
-    autoSaveSettings();
+    
+    // Sync to Google Sheets
+    await syncToGoogleSheets();
+    
     closeProductModal();
     renderProducts();
     updateStats();
-    debouncedSync();
 }
 
 function renderProducts() {
@@ -1380,6 +1452,10 @@ function deleteProduct(id) {
     }
 }
 
+// =============================================================================
+// ŞƏKİL YÜKLƏMƏ FUNKSİYALARI
+// =============================================================================
+
 function handleDragOver(e) {
     e.preventDefault();
     e.currentTarget.classList.add('dragover');
@@ -1424,6 +1500,10 @@ function removeImage(index) {
     currentProductImages.splice(index, 1);
     renderImagePreview();
 }
+
+// =============================================================================
+// KATEQORIYA FUNKSİYALARI
+// =============================================================================
 
 function openCategoryModal(categoryId = null) {
     editingCategoryId = categoryId;
@@ -1529,6 +1609,9 @@ function renderCategories() {
 function filterCategories() {
     renderCategories();
 }
+    // =============================================================================
+// MASA FUNKSİYALARI
+// =============================================================================
 
 function openTableModal(tableId = null) {
     editingTableId = tableId;
@@ -1713,6 +1796,10 @@ function printQR() {
     }
 }
 
+// =============================================================================
+// REZERVASIYA FUNKSİYALARI
+// =============================================================================
+
 function openReservationModal() {
     const tableSelect = document.getElementById('res-table');
     tableSelect.innerHTML = '<option value="">Seçin...</option>';
@@ -1846,6 +1933,10 @@ function cancelReservation(id) {
     }
 }
 
+// =============================================================================
+// SİFARİŞ FUNKSİYALARI
+// =============================================================================
+
 function renderOrders() {
     const container = document.getElementById('orders-list');
     const search = document.getElementById('order-search')?.value.toLowerCase() || '';
@@ -1905,6 +1996,10 @@ function renderOrders() {
 function filterOrders() {
     renderOrders();
 }
+
+// =============================================================================
+// PARAMETRLƏR (SETTINGS)
+// =============================================================================
 
 function handleLogoUpload(input) {
     if (input.files && input.files[0]) {
@@ -2019,6 +2114,10 @@ function loadSettings() {
         document.getElementById('hero-image-placeholder').classList.add('hidden');
     }
 }
+
+// =============================================================================
+// DASHBOARD FUNKSİYALARI
+// =============================================================================
 
 function updateStats() {
     document.getElementById('stat-products').textContent = products.length;
@@ -2141,6 +2240,23 @@ function initApp() {
     loadSettings();
 }
 
+// Event listener for availability toggle
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'prod-available') {
+        const label = document.getElementById('availability-label');
+        if (e.target.checked) {
+            label.textContent = 'Mövcuddur';
+            label.classList.remove('text-red-600');
+            label.classList.add('text-green-600');
+        } else {
+            label.textContent = 'Bitdi';
+            label.classList.remove('text-green-600');
+            label.classList.add('text-red-600');
+        }
+    }
+});
+
+// Close modal when clicking outside
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.classList.remove('active');
@@ -2150,4 +2266,3 @@ window.onclick = function(event) {
 
 </body>
 </html>
-
