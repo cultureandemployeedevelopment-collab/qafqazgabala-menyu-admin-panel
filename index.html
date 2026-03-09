@@ -75,6 +75,72 @@
     .banner-card { border:1px solid #e5e7eb; border-radius:14px; overflow:hidden; background:#fff; }
     .banner-thumb { width:100%; height:120px; object-fit:cover; background:#f3f4f6; }
     .switch-wrap { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; border-radius:14px; }
+    
+    /* Video preview styles */
+    .video-preview-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin-top: 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .video-preview-container video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .video-preview-container .remove-video-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(239,68,68,0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-preview-container:hover .remove-video-btn {
+      opacity: 1;
+    }
+    .video-thumbnail {
+      position: relative;
+      cursor: pointer;
+    }
+    .video-thumbnail .play-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-thumbnail:hover .play-overlay {
+      opacity: 1;
+    }
+    .video-thumbnail .play-icon {
+      width: 50px;
+      height: 50px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #059669;
+      font-size: 20px;
+    }
+    
     @media (max-width:768px) { .specs-grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -633,6 +699,32 @@
         </div>
       </div>
 
+      <!-- VIDEO SECTION -->
+      <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+        <div class="flex items-center gap-2 mb-3">
+          <i class="fas fa-video text-blue-600"></i>
+          <label class="block text-sm font-medium text-gray-700">Yemək Videosu</label>
+        </div>
+        <div class="flex gap-2 mb-3">
+          <input type="text" id="prod-video-url" placeholder="Video URL (YouTube, Vimeo və ya birbaşa link)" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm" onchange="updateVideoPreview()">
+          <button type="button" onclick="clearVideo()" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mb-2">Dəstəklənən formatlar: MP4, WebM, YouTube, Vimeo</p>
+        <div id="video-preview-container" class="hidden">
+          <div class="video-preview-container">
+            <video id="video-preview-player" controls poster="">
+              <source src="" type="video/mp4">
+              Brauzeriniz video tag-ni dəstəkləmir.
+            </video>
+            <button type="button" class="remove-video-btn" onclick="clearVideo()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər</label>
         <div class="drag-area" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
@@ -675,6 +767,26 @@
       <button onclick="saveProduct()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
         <i class="fas fa-save"></i> Saxla
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- VIDEO MODAL -->
+<div id="video-modal" class="modal">
+  <div class="modal-content max-w-4xl">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800">Yemək Videosu</h3>
+      <button onclick="closeVideoModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+    <div class="p-6">
+      <div class="relative w-full" style="padding-bottom: 56.25%;">
+        <video id="modal-video-player" controls class="absolute inset-0 w-full h-full rounded-xl bg-black">
+          <source src="" type="video/mp4">
+          Brauzeriniz video tag-ni dəstəkləmir.
+        </video>
+      </div>
     </div>
   </div>
 </div>
@@ -802,7 +914,7 @@
 
 <script>
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzUJafM9AiyG2bksbo1tUdqZdJBm9-O4DsniVAutXL33i9S4qN4kIaz3liRXkVdR30i5Q/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzIbfA4tpJV89K6u28XioYLasvfMPBUC8jwVLDjK_1gf9q5PLWd1YnaWOy2jH6_sM4BbQ/exec',
   DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
   AUTO_SYNC: true,
   SYNC_DELAY: 400
@@ -816,6 +928,7 @@ let reservations = JSON.parse(localStorage.getItem('reservations') || '[]');
 let settings = JSON.parse(localStorage.getItem('settings') || '{}');
 
 let currentProductImages = [];
+let currentProductVideo = '';
 let editingProductId = null;
 let editingCategoryId = null;
 let editingTableId = null;
@@ -1304,9 +1417,58 @@ function updateCategoryFilter() {
     });
 }
 
+// VIDEO FUNCTIONS
+function updateVideoPreview() {
+  const videoUrl = document.getElementById('prod-video-url').value.trim();
+  const previewContainer = document.getElementById('video-preview-container');
+  const videoPlayer = document.getElementById('video-preview-player');
+  
+  if (!videoUrl) {
+    previewContainer.classList.add('hidden');
+    return;
+  }
+  
+  // Check if it's a YouTube URL
+  const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
+  if (youtubeMatch) {
+    // For YouTube, we'll show a placeholder since we can't embed directly easily
+    videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+    previewContainer.classList.remove('hidden');
+    return;
+  }
+  
+  // For direct video URLs
+  videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  previewContainer.classList.remove('hidden');
+}
+
+function clearVideo() {
+  document.getElementById('prod-video-url').value = '';
+  document.getElementById('video-preview-container').classList.add('hidden');
+  currentProductVideo = '';
+}
+
+function openVideoModal(videoUrl) {
+  if (!videoUrl) return;
+  const modal = document.getElementById('video-modal');
+  const player = document.getElementById('modal-video-player');
+  
+  player.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  player.load();
+  modal.classList.add('active');
+}
+
+function closeVideoModal() {
+  const modal = document.getElementById('video-modal');
+  const player = document.getElementById('modal-video-player');
+  player.pause();
+  modal.classList.remove('active');
+}
+
 function openProductModal(productId = null) {
   editingProductId = productId;
   currentProductImages = [];
+  currentProductVideo = '';
   document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
 
   document.getElementById('prod-name-az').value = '';
@@ -1318,6 +1480,8 @@ function openProductModal(productId = null) {
   document.getElementById('prod-volume').value = '';
   document.getElementById('prod-time').value = '3min';
   document.getElementById('prod-vat').value = '';
+  document.getElementById('prod-video-url').value = '';
+  document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
   document.getElementById('prod-recommended').checked = false;
@@ -1352,6 +1516,13 @@ function openProductModal(productId = null) {
       document.getElementById('prod-recommended').checked = !!product.recommended;
       document.getElementById('prod-available').checked = product.available !== false;
 
+      // Load video if exists
+      if (product.videoUrl) {
+        document.getElementById('prod-video-url').value = product.videoUrl;
+        currentProductVideo = product.videoUrl;
+        updateVideoPreview();
+      }
+
       if (product.available === false) {
         document.getElementById('availability-label').textContent = 'Bitdi';
         document.getElementById('availability-label').classList.remove('text-green-600');
@@ -1370,6 +1541,7 @@ function closeProductModal() {
   document.getElementById('product-modal').classList.remove('active');
   editingProductId = null;
   currentProductImages = [];
+  currentProductVideo = '';
 }
 
 function handleDragOver(e) {
@@ -1441,6 +1613,7 @@ async function saveProduct() {
   const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
+  const videoUrl = document.getElementById('prod-video-url').value.trim();
 
   if (!nameAz || !nameEn || !categoryId || !price) {
     alert('Vacib xanaları doldurun');
@@ -1485,6 +1658,7 @@ async function saveProduct() {
     categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
     price,
     images: uploadedImages,
+    videoUrl: videoUrl || '',
     specs: {
       volume: document.getElementById('prod-volume').value.trim(),
       time: document.getElementById('prod-time').value.trim()
@@ -1539,12 +1713,38 @@ function renderProducts() {
 
     let imagesHtml = '';
     if (product.images && product.images.length > 0) {
-      imagesHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
-      product.images.forEach((img, idx) => {
-        const safeImg = String(img).replaceAll("'", "\\'");
-        imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-      });
-      imagesHtml += '</div>';
+      // If product has video, show video thumbnail first
+      if (product.videoUrl) {
+        imagesHtml += `
+          <div class="video-thumbnail relative mb-2 cursor-pointer" onclick="event.stopPropagation(); openVideoModal('${product.videoUrl.replace(/'/g, "\\'")}')">
+            <img src="${product.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[120px] object-cover rounded-lg opacity-80">
+            <div class="play-overlay rounded-lg">
+              <div class="play-icon">
+                <i class="fas fa-play ml-1"></i>
+              </div>
+            </div>
+            <div class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+              <i class="fas fa-video mr-1"></i>Video
+            </div>
+          </div>
+        `;
+        // Show remaining images
+        if (product.images.length > 1) {
+          imagesHtml += '<div class="grid grid-cols-2 gap-2">';
+          product.images.slice(1).forEach((img, idx) => {
+            const safeImg = String(img).replaceAll("'", "\\'");
+            imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 2}" class="w-full h-[80px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
+          });
+          imagesHtml += '</div>';
+        }
+      } else {
+        imagesHtml += '<div class="grid grid-cols-2 gap-2 mt-3">';
+        product.images.forEach((img, idx) => {
+          const safeImg = String(img).replaceAll("'", "\\'");
+          imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
+        });
+        imagesHtml += '</div>';
+      }
     } else {
       imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
     }
@@ -1553,6 +1753,7 @@ function renderProducts() {
     if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">Populyar</span>');
     if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Yeni</span>');
     if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">Tövsiyə</span>');
+    if (product.videoUrl) badges.push('<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"><i class="fas fa-video mr-1"></i>Video</span>');
 
     const availBadge = product.available !== false
       ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
