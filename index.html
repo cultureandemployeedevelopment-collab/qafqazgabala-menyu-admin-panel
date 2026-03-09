@@ -1,867 +1,689 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Menyu - Admin Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f5f5f0; }
-        .sidebar-gradient { background: linear-gradient(180deg, #0a1f0a 0%, #051005 100%); }
-        .nav-item { transition: all 0.2s; cursor: pointer; }
-        .nav-item:hover { background-color: rgba(255,255,255,0.05); }
-        .nav-item.active { background-color: rgba(255,255,255,0.1); border-left: 3px solid #f59e0b; }
-        .card-hover { transition: all 0.2s; }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-        .status-badge { font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 500; }
-        .chart-container { position: relative; height: 300px; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .notification-dot { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .login-bg { background: linear-gradient(135deg, #0a1f0a 0%, #1a3a1a 100%); }
-        .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
-        .image-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; cursor: pointer; transition: all 0.2s; }
-        .image-item:hover { transform: scale(1.05); border-color: #059669; }
-        .image-item img { width: 100%; height: 100%; object-fit: cover; }
-        .image-item .remove-btn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(239, 68, 68, 0.9); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
-        .image-item:hover .remove-btn { opacity: 1; }
-        .drag-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem; text-align: center; transition: all 0.2s; background: #fafafa; }
-        .drag-area.dragover { border-color: #059669; background-color: #ecfdf5; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; }
-        .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 16px; max-width: 950px; width: 92%; max-height: 90vh; overflow-y: auto; }
-        .translate-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .qr-code-container { display: flex; justify-content: center; padding: 20px; background: white; border-radius: 12px; }
-        .table-card { transition: all 0.3s; }
-        .table-card:hover { transform: translateY(-4px); }
-        .sync-indicator { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 50px; color: white; font-weight: 500; z-index: 100; transition: all 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .sync-success { background: #10b981; }
-        .sync-error { background: #ef4444; }
-        .sync-loading { background: #3b82f6; }
-        .availability-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
-        .availability-toggle input { display: none; }
-        .toggle-slider { width: 50px; height: 26px; background: #ef4444; border-radius: 26px; position: relative; transition: 0.3s; }
-        .toggle-slider:before { content: ''; position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
-        .availability-toggle input:checked + .toggle-slider { background: #10b981; }
-        .availability-toggle input:checked + .toggle-slider:before { transform: translateX(24px); }
-        .toggle-label { margin-left: 10px; font-weight: 600; font-size: 14px; }
-        .product-image-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        .product-image-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; }
-        .logo-preview { width: 150px; height: 150px; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; }
-        .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
-        .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        @media (max-width: 768px) { .specs-grid { grid-template-columns: 1fr; } }
-        .progress-bar { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 8px; }
-        .progress-bar-fill { height: 100%; background: #10b981; transition: width 0.3s; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Menyu Admin Panel</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background:#f5f5f0; }
+    .sidebar-gradient { background: linear-gradient(180deg, #0a1f0a 0%, #051005 100%); }
+    .nav-item { transition: .2s; cursor:pointer; }
+    .nav-item:hover { background: rgba(255,255,255,.05); }
+    .nav-item.active { background: rgba(255,255,255,.1); border-left: 3px solid #f59e0b; }
+    .card-hover { transition:.2s; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,.1); }
+    .status-badge { font-size:.75rem; padding:.25rem .75rem; border-radius:9999px; font-weight:500; }
+    .chart-container { position:relative; height:300px; }
+    .custom-scrollbar::-webkit-scrollbar { width:6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background:#f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+    .fade-in { animation: fadeIn .25s ease-in; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0);} }
+    .notification-dot { animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .login-bg { background: linear-gradient(135deg, #0a1f0a 0%, #1a3a1a 100%); }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; align-items:center; justify-content:center; }
+    .modal.active { display:flex; }
+    .modal-content { background:#fff; border-radius:16px; max-width:980px; width:92%; max-height:90vh; overflow-y:auto; }
+    .drag-area { border:2px dashed #d1d5db; border-radius:12px; padding:2rem; text-align:center; background:#fafafa; transition:.2s; }
+    .drag-area.dragover { border-color:#059669; background:#ecfdf5; }
+    .image-gallery { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:12px; }
+    .image-item { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; border:2px solid #e5e7eb; cursor:pointer; transition:.2s; }
+    .image-item:hover { transform:scale(1.03); border-color:#059669; }
+    .image-item img { width:100%; height:100%; object-fit:cover; }
+    .remove-btn {
+      position:absolute; top:4px; right:4px; width:24px; height:24px;
+      background:rgba(239,68,68,.95); color:#fff; border-radius:999px;
+      display:flex; align-items:center; justify-content:center; font-size:12px;
+      opacity:0; transition:.2s;
+    }
+    .image-item:hover .remove-btn { opacity:1; }
+    .sync-indicator {
+      position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:999px;
+      color:#fff; font-weight:500; z-index:100; display:flex; align-items:center; gap:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+    }
+    .sync-loading { background:#3b82f6; }
+    .sync-success { background:#10b981; }
+    .sync-error { background:#ef4444; }
+    .availability-toggle { position:relative; display:inline-flex; align-items:center; cursor:pointer; }
+    .availability-toggle input { display:none; }
+    .toggle-slider { width:50px; height:26px; background:#ef4444; border-radius:26px; position:relative; transition:.3s; }
+    .toggle-slider:before {
+      content:''; position:absolute; width:22px; height:22px; background:#fff; border-radius:50%;
+      top:2px; left:2px; transition:.3s;
+    }
+    .availability-toggle input:checked + .toggle-slider { background:#10b981; }
+    .availability-toggle input:checked + .toggle-slider:before { transform: translateX(24px); }
+    .toggle-label { margin-left:10px; font-weight:600; font-size:14px; }
+    .progress-bar { width:100%; height:4px; background:#e5e7eb; border-radius:2px; overflow:hidden; margin-top:8px; }
+    .progress-bar-fill { height:100%; background:#10b981; transition:width .3s; }
+    .logo-preview {
+      width:150px; height:150px; border:2px dashed #d1d5db; border-radius:12px;
+      display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fafafa;
+    }
+    .logo-preview img { width:100%; height:100%; object-fit:contain; }
+    .specs-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+    @media (max-width:768px) { .specs-grid { grid-template-columns:1fr; } }
+  </style>
 </head>
 <body class="text-gray-800 antialiased">
 
 <div id="sync-indicator" class="sync-indicator hidden">
-    <i class="fas fa-circle-notch fa-spin"></i>
-    <span id="sync-text">Sinxronizasiya...</span>
+  <i class="fas fa-circle-notch fa-spin"></i>
+  <span id="sync-text">Sinxronizasiya...</span>
 </div>
 
 <div id="login-screen" class="fixed inset-0 login-bg z-50 flex items-center justify-center">
-    <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl w-full max-w-md mx-4 border border-white/20">
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-amber-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <i class="fas fa-utensils text-white text-2xl"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-white mb-2">QR Menyu Admin</h1>
-            <p class="text-gray-300 text-sm">Zəhmət olmasa daxil olun</p>
-        </div>
-        <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">İstifadəçi adı</label>
-                <input type="text" id="username" value="admin" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Şifrə</label>
-                <div class="relative">
-                    <input type="password" id="password" value="admin123" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
-                    <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-                        <i class="fas fa-eye" id="eye-icon"></i>
-                    </button>
-                </div>
-            </div>
-            <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-lg transition-colors shadow-lg shadow-amber-500/30">
-                Daxil ol
-            </button>
-        </form>
-        <p id="login-error" class="text-red-400 text-sm text-center mt-4 hidden">Yanlış istifadəçi adı və ya şifrə!</p>
+  <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl w-full max-w-md mx-4 border border-white/20">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-amber-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <i class="fas fa-utensils text-white text-2xl"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-white mb-2">QR Menyu Admin</h1>
+      <p class="text-gray-300 text-sm">Zəhmət olmasa daxil olun</p>
     </div>
+
+    <form class="space-y-4" onsubmit="handleLogin(event)">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">İstifadəçi adı</label>
+        <input type="text" id="username" value="admin" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Şifrə</label>
+        <div class="relative">
+          <input type="password" id="password" value="admin123" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white">
+          <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-lg transition-colors">
+        Daxil ol
+      </button>
+    </form>
+
+    <p id="login-error" class="text-red-400 text-sm text-center mt-4 hidden">Yanlış istifadəçi adı və ya şifrə!</p>
+  </div>
 </div>
 
 <div id="main-app" class="hidden h-screen overflow-hidden">
-    <div class="flex h-full">
-        <aside class="sidebar-gradient w-64 flex-shrink-0 flex flex-col text-white">
-            <div class="p-6 flex items-center gap-3 border-b border-white/10">
-                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <i class="fas fa-utensils text-white text-lg"></i>
+  <div class="flex h-full">
+    <aside class="sidebar-gradient w-64 flex-shrink-0 flex flex-col text-white">
+      <div class="p-6 flex items-center gap-3 border-b border-white/10">
+        <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
+          <i class="fas fa-utensils text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">QR Menyu</h1>
+          <p class="text-xs text-gray-400">Admin Paneli</p>
+        </div>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto custom-scrollbar py-4">
+        <div class="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Əsas Menyu</div>
+
+        <div onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm font-medium text-white">
+          <i class="fas fa-th-large w-5"></i> Dashboard
+        </div>
+
+        <div onclick="showPage('categories')" id="nav-categories" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+          <i class="fas fa-list w-5"></i> Kateqoriyalar
+        </div>
+
+        <div onclick="showPage('products')" id="nav-products" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+          <i class="fas fa-utensils w-5"></i> Menyu Məhsulları
+        </div>
+
+        <div onclick="showPage('tables')" id="nav-tables" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+          <i class="fas fa-chair w-5"></i> Masalar
+        </div>
+
+        <div onclick="showPage('settings')" id="nav-settings" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+          <i class="fas fa-cog w-5"></i> Parametrlər
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-white/10">
+        <div class="flex items-center gap-3 mb-4 px-2">
+          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">A</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-white truncate">Admin</p>
+            <p class="text-xs text-gray-400 truncate">admin@qrmenu.az</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors w-full px-2">
+          <i class="fas fa-sign-out-alt w-5"></i> Çıxış
+        </button>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto bg-[#f5f5f0]">
+      <header class="bg-white/70 backdrop-blur-sm sticky top-0 z-20 px-8 py-4 flex items-center justify-between border-b border-gray-200/50">
+        <div>
+          <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+          <p id="page-subtitle" class="text-sm text-gray-500">Restoranınızın ümumi vəziyyəti</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div id="sync-status-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2">
+            <i class="fas fa-check-circle"></i>
+            <span>Sinxronizasiya edildi</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-8">
+        <!-- DASHBOARD -->
+        <div id="page-dashboard" class="page-content fade-in">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-green-500">
+              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-orders">0</div>
+              <div class="text-sm text-gray-500">Sifarişlər</div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-amber-500">
+              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-revenue">0₼</div>
+              <div class="text-sm text-gray-500">Gəlir</div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-teal-500">
+              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-products">0</div>
+              <div class="text-sm text-gray-500">Məhsullar</div>
+              <div class="text-xs text-gray-400 mt-1"><span id="stat-categories">0</span> kateqoriya</div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-red-500">
+              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-tables">0</div>
+              <div class="text-sm text-gray-500">Masalar</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <h3 class="font-bold text-gray-800 text-lg mb-4">Həftəlik Görünüş</h3>
+            <div class="chart-container">
+              <canvas id="weeklyOrdersChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- CATEGORIES -->
+        <div id="page-categories" class="page-content hidden fade-in">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-gray-800">Kateqoriyalar</h3>
+              <p class="text-sm text-gray-500 mt-1"><span id="category-count">0</span> kateqoriya</p>
+            </div>
+            <button onclick="openCategoryModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <i class="fas fa-plus"></i> Yeni Kateqoriya
+            </button>
+          </div>
+
+          <div class="mb-6">
+            <div class="relative">
+              <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input type="text" id="category-search" onkeyup="filterCategories()" placeholder="Kateqoriya axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="categories-grid"></div>
+        </div>
+
+        <!-- PRODUCTS -->
+        <div id="page-products" class="page-content hidden fade-in">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-gray-800">Menyu Məhsulları</h3>
+              <p class="text-sm text-gray-500 mt-1"><span id="product-count-header">0</span> məhsul</p>
+            </div>
+            <button onclick="openProductModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <i class="fas fa-plus"></i> Yeni Məhsul
+            </button>
+          </div>
+
+          <div class="flex gap-4 mb-6">
+            <div class="relative flex-1">
+              <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input type="text" id="product-search" onkeyup="filterProducts()" placeholder="Məhsul axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200">
+            </div>
+
+            <select id="category-filter" onchange="filterProducts()" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600">
+              <option value="">Bütün kateqoriyalar</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="products-grid"></div>
+        </div>
+
+        <!-- TABLES -->
+        <div id="page-tables" class="page-content hidden fade-in">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-gray-800">Masalar və QR Kodlar</h3>
+              <p class="text-sm text-gray-500 mt-1"><span id="table-count">0</span> masa</p>
+            </div>
+            <button onclick="openTableModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <i class="fas fa-plus"></i> Yeni Masa
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tables-grid"></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="page-settings" class="page-content hidden fade-in">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
+              <div class="flex items-center gap-2 mb-6">
+                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-image text-amber-600"></i>
+                </div>
+                <h4 class="font-semibold text-gray-800">Restoran Logosu</h4>
+              </div>
+
+              <div class="flex flex-col items-center">
+                <div class="logo-preview mb-4">
+                  <div class="text-center text-gray-400" id="logo-placeholder">
+                    <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+                    <p class="text-sm">Logo yükləyin</p>
+                  </div>
+                  <img id="logo-image" class="hidden" src="" alt="Logo">
+                </div>
+
+                <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoUpload(this)">
+
+                <div class="flex gap-2">
+                  <button onclick="document.getElementById('logo-input').click()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
+                    <i class="fas fa-upload mr-2"></i>Logo Seç
+                  </button>
+                  <button onclick="removeLogo()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 text-sm">
+                    <i class="fas fa-trash mr-2"></i>Sil
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+              <div class="flex items-center gap-2 mb-6">
+                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-image text-emerald-600"></i>
+                </div>
+                <h4 class="font-semibold text-gray-800">Hero Şəkli</h4>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Hero başlıq (AZ)</label>
+                  <input type="text" id="hero-title-az" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Hero title (EN)</label>
+                  <input type="text" id="hero-title-en" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Hero şəkli</label>
+                  <div class="space-y-3">
+                    <div class="w-full h-44 rounded-xl border border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <img id="hero-image-preview" src="" class="w-full h-full object-cover hidden">
+                      <div id="hero-image-placeholder" class="text-gray-400 text-sm text-center">
+                        <i class="fas fa-image text-2xl mb-2"></i>
+                        <div>Hero image əlavə edin</div>
+                      </div>
+                    </div>
+
+                    <input type="file" id="hero-image-input" class="hidden" accept="image/*" onchange="handleHeroImageUpload(this)">
+
+                    <div class="flex gap-2">
+                      <button type="button" onclick="document.getElementById('hero-image-input').click()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
+                        <i class="fas fa-upload mr-2"></i>Şəkil Seç
+                      </button>
+                      <button type="button" onclick="removeHeroImage()" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+                        <i class="fas fa-trash mr-2"></i>Sil
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+              <h4 class="font-semibold text-gray-800 mb-6">Restoran Məlumatları</h4>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (AZ)</label>
+                  <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight">QR Menyu</h1>
-                    <p class="text-xs text-gray-400">Admin Paneli</p>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (EN)</label>
+                  <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
-            </div>
-
-            <nav class="flex-1 overflow-y-auto custom-scrollbar py-4">
-                <div class="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Əsas Menyu</div>
-
-                <div onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm font-medium text-white">
-                    <i class="fas fa-th-large w-5"></i>
-                    Dashboard
-                </div>
-
-                <div onclick="showPage('categories')" id="nav-categories" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-list w-5"></i>
-                    Kateqoriyalar
-                </div>
-
-                <div onclick="showPage('products')" id="nav-products" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-utensils w-5"></i>
-                    Menyu Məhsulları
-                </div>
-
-                <div onclick="showPage('orders')" id="nav-orders" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-shopping-bag w-5"></i>
-                    Sifarişlər
-                    <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full notification-dot" id="order-badge">0</span>
-                </div>
-
-                <div onclick="showPage('reservations')" id="nav-reservations" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-calendar-alt w-5"></i>
-                    Rezervasiyalar
-                </div>
-
-                <div onclick="showPage('tables')" id="nav-tables" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-chair w-5"></i>
-                    Masalar
-                </div>
-
-                <div onclick="showPage('settings')" id="nav-settings" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
-                    <i class="fas fa-cog w-5"></i>
-                    Parametrlər
-                </div>
-            </nav>
-
-            <div class="p-4 border-t border-white/10">
-                <div class="flex items-center gap-3 mb-4 px-2">
-                    <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">A</div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-white truncate">Admin</p>
-                        <p class="text-xs text-gray-400 truncate">admin@qrmenu.az</p>
-                    </div>
-                </div>
-                <button onclick="logout()" class="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors w-full px-2">
-                    <i class="fas fa-sign-out-alt w-5"></i>
-                    Çıxış
-                </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 overflow-y-auto bg-[#f5f5f0]">
-            <header class="bg-white/50 backdrop-blur-sm sticky top-0 z-20 px-8 py-4 flex items-center justify-between border-b border-gray-200/50">
                 <div>
-                    <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
-                    <p id="page-subtitle" class="text-sm text-gray-500">Restoranınızın ümumi vəziyyəti</p>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Telefon</label>
+                  <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
-                <div class="flex items-center gap-4">
-                    <div id="sync-status-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Sinxronizasiya edildi</span>
-                    </div>
-                    <button class="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
-                    <button onclick="showPage('settings')" class="w-10 h-10 bg-green-900 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer hover:ring-2 hover:ring-green-700 transition-all">
-                        A
-                    </button>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Email</label>
+                  <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
-            </header>
-
-            <div class="p-8">
-                <div id="page-dashboard" class="page-content fade-in">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-green-500">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-shopping-cart text-green-600 text-xl"></i>
-                                </div>
-                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
-                                    <i class="fas fa-arrow-up text-xs"></i> +12%
-                                </span>
-                            </div>
-                            <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-orders">0</div>
-                            <div class="text-sm text-gray-500">Bugünkü Sifarişlər</div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-amber-500">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-chart-line text-amber-600 text-xl"></i>
-                                </div>
-                                <span class="text-green-600 text-xs font-semibold flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
-                                    <i class="fas fa-arrow-up text-xs"></i> +8%
-                                </span>
-                            </div>
-                            <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-revenue">0₼</div>
-                            <div class="text-sm text-gray-500">Bugünkü Gəlir</div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-teal-500">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-utensils text-teal-600 text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-products">0</div>
-                            <div class="text-sm text-gray-500">Menyu Məhsulları</div>
-                            <div class="text-xs text-gray-400 mt-1"><span id="stat-categories">0</span> kateqoriya</div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-red-500">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-table text-red-600 text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-tables">0</div>
-                            <div class="text-sm text-gray-500">Aktiv Masalar</div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center justify-between mb-6">
-                                <div>
-                                    <h3 class="font-bold text-gray-800 text-lg">Həftəlik Sifarişlər</h3>
-                                    <p class="text-xs text-gray-500">Son 7 günün statistikası</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">+22% artım</span>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="weeklyOrdersChart"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <h3 class="font-bold text-gray-800 text-lg mb-4">Son Sifarişlər</h3>
-                            <div class="space-y-3" id="recent-orders-list"></div>
-                            <button onclick="showPage('orders')" class="w-full mt-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                                Bütün sifarişlərə bax <i class="fas fa-arrow-right ml-1"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl p-6 shadow-sm">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="font-bold text-gray-800 text-lg">Populyar Məhsullar</h3>
-                            <button onclick="showPage('products')" class="text-sm text-green-700 hover:text-green-800 font-medium">Hamısına bax <i class="fas fa-arrow-right ml-1"></i></button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="popular-products-grid"></div>
-                    </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (AZ)</label>
+                  <textarea id="rest-address-az" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
                 </div>
-
-                <div id="page-categories" class="page-content hidden fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-800">Menyu Kateqoriyaları</h3>
-                            <p class="text-sm text-gray-500 mt-1"><span id="category-count">0</span> kateqoriya</p>
-                        </div>
-                        <button onclick="openCategoryModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20">
-                            <i class="fas fa-plus"></i>
-                            Yeni Kateqoriya
-                        </button>
-                    </div>
-
-                    <div class="mb-6">
-                        <div class="relative">
-                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="text" id="category-search" onkeyup="filterCategories()" placeholder="Kateqoriya axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="categories-grid"></div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (EN)</label>
+                  <textarea id="rest-address-en" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
                 </div>
-
-                <div id="page-products" class="page-content hidden fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-800">Menyu Məhsulları</h3>
-                            <p class="text-sm text-gray-500 mt-1"><span id="product-count-header">0</span> məhsul</p>
-                        </div>
-                        <button onclick="openProductModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20">
-                            <i class="fas fa-plus"></i>
-                            Yeni Məhsul
-                        </button>
-                    </div>
-
-                    <div class="flex gap-4 mb-6">
-                        <div class="relative flex-1">
-                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="text" id="product-search" onkeyup="filterProducts()" placeholder="Məhsul axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                        </div>
-                        <select id="category-filter" onchange="filterProducts()" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900">
-                            <option value="">Bütün kateqoriyalar</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="products-grid"></div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Həftəiçi</label>
+                  <input type="text" id="rest-work-weekday" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
-
-                <div id="page-orders" class="page-content hidden fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-800">Sifarişlər</h3>
-                            <p class="text-sm text-gray-500 mt-1"><span id="order-count">0</span> sifariş</p>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mb-6">
-                        <div class="relative flex-1">
-                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="text" id="order-search" onkeyup="filterOrders()" placeholder="Sifariş axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                        </div>
-                        <select id="order-status-filter" onchange="filterOrders()" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600">
-                            <option value="">Bütün statuslar</option>
-                            <option value="pending">Gözləyən</option>
-                            <option value="active">Aktiv</option>
-                            <option value="completed">Tamamlanan</option>
-                        </select>
-                    </div>
-
-                    <div class="space-y-4" id="orders-list"></div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Həftəsonu</label>
+                  <input type="text" id="rest-work-weekend" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
                 </div>
-
-                <div id="page-reservations" class="page-content hidden fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-800">Rezervasiyalar</h3>
-                            <p class="text-sm text-gray-500 mt-1"><span id="reservation-count">0</span> rezervasiya</p>
-                        </div>
-                        <button onclick="openReservationModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20">
-                            <i class="fas fa-plus"></i>
-                            Yeni Rezervasiya
-                        </button>
-                    </div>
-
-                    <div class="space-y-4" id="reservations-list"></div>
-                </div>
-
-                <div id="page-tables" class="page-content hidden fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-800">Masalar və QR Kodlar</h3>
-                            <p class="text-sm text-gray-500 mt-1"><span id="table-count">0</span> masa</p>
-                        </div>
-                        <button onclick="openTableModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20">
-                            <i class="fas fa-plus"></i>
-                            Yeni Masa
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tables-grid"></div>
-                </div>
-
-                <div id="page-settings" class="page-content hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-image text-amber-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Restoran Logosu</h4>
-                            </div>
-                            <div class="flex flex-col items-center">
-                                <div class="logo-preview mb-4" id="logo-preview-container">
-                                    <div class="text-center text-gray-400" id="logo-placeholder">
-                                        <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
-                                        <p class="text-sm">Logo yükləyin</p>
-                                    </div>
-                                    <img id="logo-image" class="hidden" src="" alt="Logo">
-                                </div>
-                                <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoUpload(this)">
-                                <div class="flex gap-2">
-                                    <button onclick="document.getElementById('logo-input').click()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm">
-                                        <i class="fas fa-upload mr-2"></i>Logo Seç
-                                    </button>
-                                    <button onclick="removeLogo()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                                        <i class="fas fa-trash mr-2"></i>Sil
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-image text-emerald-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Başlanğıc Hero Şəkli</h4>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero başlıq (AZ)</label>
-                                    <input type="text" id="hero-title-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero title (EN)</label>
-                                    <input type="text" id="hero-title-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Hero şəkli</label>
-                                    <div class="space-y-3">
-                                        <div id="hero-image-preview-wrap" class="w-full h-44 rounded-xl border border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center">
-                                            <img id="hero-image-preview" src="" class="w-full h-full object-cover hidden">
-                                            <div id="hero-image-placeholder" class="text-gray-400 text-sm text-center">
-                                                <i class="fas fa-image text-2xl mb-2"></i>
-                                                <div>Hero image əlavə edin</div>
-                                            </div>
-                                        </div>
-
-                                        <input type="file" id="hero-image-input" class="hidden" accept="image/*" onchange="handleHeroImageUpload(this)">
-                                        <div class="flex gap-2">
-                                            <button type="button" onclick="document.getElementById('hero-image-input').click()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
-                                                <i class="fas fa-upload mr-2"></i>Şəkil Seç
-                                            </button>
-                                            <button type="button" onclick="removeHeroImage()" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
-                                                <i class="fas fa-trash mr-2"></i>Sil
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-800">Ağıllı Axtarış Badge</p>
-                                        <p class="text-xs text-gray-500">Müştəri smart axtarış olduğunu görsün</p>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="smart-search-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-store text-gray-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Restoran Məlumatları</h4>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (AZ)</label>
-                                    <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (EN)</label>
-                                    <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Telefon</label>
-                                    <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Email</label>
-                                    <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-map-marker-alt text-blue-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Ünvan</h4>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (AZ)</label>
-                                    <textarea id="rest-address-az" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (EN)</label>
-                                    <textarea id="rest-address-en" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                                    <i class="far fa-clock text-orange-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">İş Saatları</h4>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Həftəiçi</label>
-                                    <input type="text" id="rest-work-weekday" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2">Həftəsonu</label>
-                                    <input type="text" id="rest-work-weekend" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-share-alt text-purple-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Sosial Media</h4>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-facebook text-blue-600 mr-1"></i> Facebook</label>
-                                    <input type="text" id="social-facebook" placeholder="https://facebook.com/ ..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-instagram text-pink-600 mr-1"></i> Instagram</label>
-                                    <input type="text" id="social-instagram" placeholder="https://instagram.com/ ..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-2"><i class="fab fa-whatsapp text-green-600 mr-1"></i> WhatsApp</label>
-                                    <input type="text" id="social-whatsapp" placeholder="+994XXXXXXXXX" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" onchange="autoSaveSettings()">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-6 shadow-sm">
-                            <div class="flex items-center gap-2 mb-6">
-                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-language text-purple-600"></i>
-                                </div>
-                                <h4 class="font-semibold text-gray-800">Avtomatik Tərcümə</h4>
-                            </div>
-                            <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-800">AZ ⇄ EN Avtotərcümə</p>
-                                    <p class="text-xs text-gray-500">Məhsul formunda iki tərəfli avtomatik tərcümə</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="auto-translate-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
-        </main>
-    </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+              <h4 class="font-semibold text-gray-800 mb-6">Sosial Media və Tərcümə</h4>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Facebook</label>
+                  <input type="text" id="social-facebook" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Instagram</label>
+                  <input type="text" id="social-instagram" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">WhatsApp</label>
+                  <input type="text" id="social-whatsapp" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">AZ ⇄ EN Avtotərcümə</p>
+                    <p class="text-xs text-gray-500">Məhsul formunda avtomatik tərcümə</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="auto-translate-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Ağıllı Axtarış Badge</p>
+                    <p class="text-xs text-gray-500">Menu saytında görünsün</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="smart-search-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
 </div>
+
+<!-- PRODUCT MODAL -->
 <div id="product-modal" class="modal">
-    <div class="modal-content">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800" id="product-modal-title">Yeni Məhsul</h3>
-            <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 space-y-6">
-            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div>
-                    <p class="font-semibold text-gray-800">Məhsul Vəziyyəti</p>
-                    <p class="text-xs text-gray-500">Müştərilər üçün görünürlük</p>
-                </div>
-                <label class="availability-toggle">
-                    <input type="checkbox" id="prod-available" checked>
-                    <span class="toggle-slider"></span>
-                    <span class="toggle-label text-green-600" id="availability-label">Mövcuddur</span>
-                </label>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (AZ) <span class="text-red-500">*</span></label>
-                    <input type="text" id="prod-name-az" oninput="handleProductFieldInput('name','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Məsələn: Lülə kabab">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Product name (EN) <span class="text-red-500">*</span></label>
-                    <input type="text" id="prod-name-en" oninput="handleProductFieldInput('name','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-lg" placeholder="Example: Lyulya kebab">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (AZ)</label>
-                    <textarea id="prod-desc-az" rows="4" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Yeməyin tərkibi və xüsusiyyətləri..."></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Description (EN)</label>
-                    <textarea id="prod-desc-en" rows="4" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all text-sm" placeholder="Ingredients and description..."></textarea>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Kateqoriya <span class="text-red-500">*</span></label>
-                    <select id="prod-category" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                        <option value="">Seçin...</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼) <span class="text-red-500">*</span></label>
-                    <input type="number" id="prod-price" step="0.01" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all" placeholder="0.00">
-                </div>
-            </div>
-
-            <div class="specs-grid">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Həcm</label>
-                    <input type="text" id="prod-volume" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" placeholder="Məs: 0.75ml">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Hazırlanma vaxtı</label>
-                    <input type="text" id="prod-time" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" placeholder="Məs: 3min" value="3min">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ƏDV</label>
-                    <input type="text" id="prod-vat" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 text-sm" placeholder="Məs: 18% VAT">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər <span class="text-xs text-gray-400">(Çoxlu seçə bilərsiniz)</span></label>
-                <div class="drag-area" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
-                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                    <p class="text-sm text-gray-600">Şəkilləri bura sürükləyin və ya <span class="text-green-700 font-medium cursor-pointer" onclick="document.getElementById('file-input').click()">seçin</span></p>
-                    <p class="text-xs text-gray-400 mt-1">Bir neçə şəkil əlavə edə bilərsiniz</p>
-                    <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
-                </div>
-                <div id="image-preview" class="image-gallery mt-4"></div>
-                <div id="upload-progress" class="hidden mt-2">
-                    <div class="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Yüklənir...</span>
-                        <span id="upload-percent">0%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-6 flex-wrap">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
-                    <span class="text-sm text-gray-700">Populyar</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
-                    <span class="text-sm text-gray-700">Yeni</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="prod-recommended" class="w-4 h-4 text-green-900 rounded focus:ring-green-900">
-                    <span class="text-sm text-gray-700">Tövsiyə olunan</span>
-                </label>
-            </div>
-        </div>
-        <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
-            <button onclick="closeProductModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Ləğv et</button>
-            <button onclick="saveProduct()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 transition-colors flex items-center gap-2">
-                <i class="fas fa-save"></i> Saxla
-            </button>
-        </div>
+  <div class="modal-content">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800" id="product-modal-title">Yeni Məhsul</h3>
+      <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
+
+    <div class="p-6 space-y-6">
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+        <div>
+          <p class="font-semibold text-gray-800">Məhsul Vəziyyəti</p>
+          <p class="text-xs text-gray-500">Müştərilər üçün görünürlük</p>
+        </div>
+        <label class="availability-toggle">
+          <input type="checkbox" id="prod-available" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label text-green-600" id="availability-label">Mövcuddur</span>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (AZ)</label>
+          <input type="text" id="prod-name-az" oninput="handleProductFieldInput('name','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məsələn: Lülə kabab">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Product name (EN)</label>
+          <input type="text" id="prod-name-en" oninput="handleProductFieldInput('name','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Example: Lyulya kebab">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (AZ)</label>
+          <textarea id="prod-desc-az" rows="4" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Description (EN)</label>
+          <textarea id="prod-desc-en" rows="4" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Kateqoriya</label>
+          <select id="prod-category" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+            <option value="">Seçin...</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼)</label>
+          <input type="number" id="prod-price" step="0.01" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        </div>
+      </div>
+
+      <div class="specs-grid">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Həcm</label>
+          <input type="text" id="prod-volume" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Hazırlanma vaxtı</label>
+          <input type="text" id="prod-time" value="3min" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">ƏDV</label>
+          <input type="text" id="prod-vat" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər</label>
+        <div class="drag-area" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+          <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+          <p class="text-sm text-gray-600">Şəkilləri bura sürükləyin və ya <span class="text-green-700 font-medium cursor-pointer" onclick="document.getElementById('file-input').click()">seçin</span></p>
+          <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
+        </div>
+
+        <div id="image-preview" class="image-gallery mt-4"></div>
+
+        <div id="upload-progress" class="hidden mt-2">
+          <div class="flex justify-between text-xs text-gray-600 mb-1">
+            <span>Yüklənir...</span>
+            <span id="upload-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 flex-wrap">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded">
+          <span class="text-sm text-gray-700">Populyar</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded">
+          <span class="text-sm text-gray-700">Yeni</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="prod-recommended" class="w-4 h-4 text-green-900 rounded">
+          <span class="text-sm text-gray-700">Tövsiyə olunan</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+      <button onclick="closeProductModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
+      <button onclick="saveProduct()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
+        <i class="fas fa-save"></i> Saxla
+      </button>
+    </div>
+  </div>
 </div>
 
+<!-- CATEGORY MODAL -->
 <div id="category-modal" class="modal">
-    <div class="modal-content max-w-md">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800" id="category-modal-title">Yeni Kateqoriya</h3>
-            <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Ad (Azərbaycanca) <span class="text-red-500">*</span></label>
-                <input type="text" id="cat-name-az" oninput="translateCategoryName()" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all" placeholder="Məsələn: Əsas Yeməklər">
-            </div>
-            <div id="cat-translation-box" class="translate-box rounded-xl p-4 text-white hidden">
-                <div class="flex items-center gap-2 mb-2">
-                    <i class="fas fa-language"></i>
-                    <span class="font-semibold">Avtomatik Tərcümə</span>
-                </div>
-                <p class="text-sm opacity-90">İngiliscə: <span id="cat-translated-text" class="font-bold"></span></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">İkon</label>
-                <div class="flex gap-2 flex-wrap" id="icon-selector">
-                    <button type="button" onclick="selectIcon('🍽️')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍽️</button>
-                    <button type="button" onclick="selectIcon('🥗')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🥗</button>
-                    <button type="button" onclick="selectIcon('🍔')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍔</button>
-                    <button type="button" onclick="selectIcon('🍕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍕</button>
-                    <button type="button" onclick="selectIcon('🍰')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍰</button>
-                    <button type="button" onclick="selectIcon('☕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">☕</button>
-                    <button type="button" onclick="selectIcon('🥤')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🥤</button>
-                    <button type="button" onclick="selectIcon('🍷')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍷</button>
-                    <button type="button" onclick="selectIcon('🍹')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍹</button>
-                    <button type="button" onclick="selectIcon('🥩')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🥩</button>
-                    <button type="button" onclick="selectIcon('🍨')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🍨</button>
-                    <button type="button" onclick="selectIcon('🥪')" class="w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-green-900 flex items-center justify-center text-xl">🥪</button>
-                </div>
-                <input type="hidden" id="cat-icon" value="🍽️">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Sıra nömrəsi</label>
-                <input type="number" id="cat-sort" value="0" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-            </div>
-        </div>
-        <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
-            <button onclick="closeCategoryModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Ləğv et</button>
-            <button onclick="saveCategory()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 transition-colors flex items-center gap-2">
-                <i class="fas fa-save"></i> Saxla
-            </button>
-        </div>
+  <div class="modal-content max-w-md">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800" id="category-modal-title">Yeni Kateqoriya</h3>
+      <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Ad (AZ)</label>
+        <input type="text" id="cat-name-az" oninput="translateCategoryName()" class="w-full px-4 py-2 rounded-lg border border-gray-200" placeholder="Məsələn: Əsas Yeməklər">
+      </div>
+
+      <div id="cat-translation-box" class="rounded-xl p-4 text-white hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-language"></i>
+          <span class="font-semibold">Avtomatik Tərcümə</span>
+        </div>
+        <p class="text-sm opacity-90">İngiliscə: <span id="cat-translated-text" class="font-bold"></span></p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">İkon</label>
+        <div class="flex gap-2 flex-wrap" id="icon-selector">
+          <button type="button" onclick="selectIcon('🍽️')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍽️</button>
+          <button type="button" onclick="selectIcon('🥗')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥗</button>
+          <button type="button" onclick="selectIcon('🍔')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍔</button>
+          <button type="button" onclick="selectIcon('🍕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍕</button>
+          <button type="button" onclick="selectIcon('🍰')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍰</button>
+          <button type="button" onclick="selectIcon('☕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">☕</button>
+          <button type="button" onclick="selectIcon('🥤')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥤</button>
+          <button type="button" onclick="selectIcon('🍷')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍷</button>
+          <button type="button" onclick="selectIcon('🍹')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍹</button>
+          <button type="button" onclick="selectIcon('🥩')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥩</button>
+        </div>
+        <input type="hidden" id="cat-icon" value="🍽️">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Sıra nömrəsi</label>
+        <input type="number" id="cat-sort" value="0" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+      <button onclick="closeCategoryModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
+      <button onclick="saveCategory()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
+        <i class="fas fa-save"></i> Saxla
+      </button>
+    </div>
+  </div>
 </div>
 
+<!-- TABLE MODAL -->
 <div id="table-modal" class="modal">
-    <div class="modal-content max-w-md">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800" id="table-modal-title">Yeni Masa</h3>
-            <button onclick="closeTableModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Masa Nömrəsi <span class="text-red-500">*</span></label>
-                <input type="text" id="table-number" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all" placeholder="Məsələn: 1 və ya A1">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Tutumu (nəfər)</label>
-                <input type="number" id="table-capacity" value="4" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Yerləşmə</label>
-                <select id="table-location" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                    <option value="inside">İçəri</option>
-                    <option value="outside">Çöl</option>
-                    <option value="terrace">Terras</option>
-                    <option value="vip">VIP</option>
-                </select>
-            </div>
-        </div>
-        <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
-            <button onclick="closeTableModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Ləğv et</button>
-            <button onclick="saveTable()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 transition-colors flex items-center gap-2">
-                <i class="fas fa-save"></i> Saxla
-            </button>
-        </div>
+  <div class="modal-content max-w-md">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800" id="table-modal-title">Yeni Masa</h3>
+      <button onclick="closeTableModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
+
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Masa Nömrəsi</label>
+        <input type="text" id="table-number" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Tutumu</label>
+        <input type="number" id="table-capacity" value="4" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Yerləşmə</label>
+        <select id="table-location" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <option value="inside">İçəri</option>
+          <option value="outside">Çöl</option>
+          <option value="terrace">Terras</option>
+          <option value="vip">VIP</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+      <button onclick="closeTableModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
+      <button onclick="saveTable()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
+        <i class="fas fa-save"></i> Saxla
+      </button>
+    </div>
+  </div>
 </div>
 
+<!-- QR MODAL -->
 <div id="qr-modal" class="modal">
-    <div class="modal-content max-w-md">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800">QR Kod - <span id="qr-table-name"></span></h3>
-            <button onclick="closeQrModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 text-center">
-            <div id="qr-code-display" class="qr-code-container mb-4"></div>
-            <p class="text-sm text-gray-500 mb-4">Müştərilər bu QR kodu skan edərək menyuya baxa bilərlər</p>
-            <div class="flex gap-2">
-                <button onclick="downloadQR()" class="flex-1 bg-green-900 text-white py-3 rounded-lg hover:bg-green-800 transition-colors flex items-center justify-center gap-2">
-                    <i class="fas fa-download"></i> Yüklə
-                </button>
-                <button onclick="printQR()" class="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                    <i class="fas fa-print"></i> Çap et
-                </button>
-            </div>
-        </div>
+  <div class="modal-content max-w-md">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-gray-800">QR Kod - <span id="qr-table-name"></span></h3>
+      <button onclick="closeQrModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
+
+    <div class="p-6 text-center">
+      <div id="qr-code-display" class="flex justify-center p-5 bg-white rounded-xl mb-4"></div>
+      <p class="text-sm text-gray-500 mb-4">Müştərilər bu QR kodu skan edərək menyuya baxa bilərlər</p>
+
+      <div class="flex gap-2">
+        <button onclick="downloadQR()" class="flex-1 bg-green-900 text-white py-3 rounded-lg hover:bg-green-800 flex items-center justify-center gap-2">
+          <i class="fas fa-download"></i> Yüklə
+        </button>
+        <button onclick="printQR()" class="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+          <i class="fas fa-print"></i> Çap et
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="reservation-modal" class="modal">
-    <div class="modal-content max-w-md">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800">Yeni Rezervasiya</h3>
-            <button onclick="closeReservationModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Müştəri Adı <span class="text-red-500">*</span></label>
-                <input type="text" id="res-customer" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Telefon <span class="text-red-500">*</span></label>
-                <input type="text" id="res-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all" placeholder="+994 XX XXX XX XX">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Tarix</label>
-                    <input type="date" id="res-date" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Saat</label>
-                    <input type="time" id="res-time" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Nəfər sayı</label>
-                <input type="number" id="res-guests" value="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Masa</label>
-                <select id="res-table" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all">
-                    <option value="">Seçin...</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Xüsusi İstəklər</label>
-                <textarea id="res-notes" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-900/20 focus:border-green-900 transition-all"></textarea>
-            </div>
-        </div>
-        <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
-            <button onclick="closeReservationModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Ləğv et</button>
-            <button onclick="saveReservation()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 transition-colors flex items-center gap-2">
-                <i class="fas fa-save"></i> Saxla
-            </button>
-        </div>
-    </div>
-</div>
-<script><script>
-// =============================================================================
-// KONFIQURASIYA
-// =============================================================================
+<script>
 const CONFIG = {
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbyxFzMeb49MzbNO2Atx9-MOGfU1IDqog9W0omTCXb-yP4T9tGcFkhtSCVC3Y5IZlegRww/exec',
-    DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
-    SHEET_ID: '1S1TJ7FVqqsiIc07NeJMz9TcCrmpHSHyjHGEuoO4eCoM',
-    AUTO_SYNC: true,
-    SYNC_DELAY: 2000
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz3EzHoRDj3jGjJLy12AF-89352NBlpZOwrWHQFuCa2ydzvZVWxwLIdT9q3TkIYW_92xg/exec',
+  DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
+  AUTO_SYNC: true,
+  SYNC_DELAY: 1500
 };
 
-// =============================================================================
-// GLOBAL DƏYİŞƏNLƏR
-// =============================================================================
 let categories = JSON.parse(localStorage.getItem('categories') || '[]');
 let products = JSON.parse(localStorage.getItem('products') || '[]');
 let orders = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -882,1429 +704,1059 @@ let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
 let weeklyChart = null;
 
-// =============================================================================
-// KÖMƏKÇİ FUNKSİYALAR
-// =============================================================================
 function escapeHtml(value = '') {
-    return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function showSyncIndicator(text, type) {
-    const indicator = document.getElementById('sync-indicator');
-    const textEl = document.getElementById('sync-text');
-    indicator.className = `sync-indicator sync-${type}`;
-    textEl.textContent = text;
-    indicator.classList.remove('hidden');
+  const indicator = document.getElementById('sync-indicator');
+  const textEl = document.getElementById('sync-text');
+  indicator.className = `sync-indicator sync-${type}`;
+  textEl.textContent = text;
+  indicator.classList.remove('hidden');
 }
 
 function hideSyncIndicator() {
-    document.getElementById('sync-indicator').classList.add('hidden');
+  document.getElementById('sync-indicator').classList.add('hidden');
 }
 
 function showSyncBadge() {
-    const badge = document.getElementById('sync-status-badge');
-    if (!badge) return;
-    badge.classList.remove('hidden');
-    setTimeout(() => badge.classList.add('hidden'), 3000);
+  const badge = document.getElementById('sync-status-badge');
+  badge.classList.remove('hidden');
+  setTimeout(() => badge.classList.add('hidden'), 2500);
 }
 
 function safeNumber(value, fallback = 0) {
-    const n = Number(value);
-    return isNaN(n) ? fallback : n;
+  const n = Number(value);
+  return isNaN(n) ? fallback : n;
 }
 
-function safeJsonParse(text, fallback) {
-    try {
-        return JSON.parse(text);
-    } catch {
-        return fallback;
-    }
-}
-
-// =============================================================================
-// GOOGLE DRIVE ŞƏKİL YÜKLƏMƏ
-// =============================================================================
-async function uploadImageToDrive(base64Image, fileName) {
-    if (!CONFIG.GAS_URL) return null;
-
-    try {
-        showSyncIndicator('Şəkil yüklənir...', 'loading');
-
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                action: 'uploadImage',
-                image: base64Image,
-                fileName: fileName || `image_${Date.now()}.jpg`,
-                folderId: CONFIG.DRIVE_FOLDER_ID
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showSyncIndicator('Şəkil yükləndi!', 'success');
-            setTimeout(hideSyncIndicator, 1500);
-            return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
-        }
-
-        throw new Error(result.error || 'Upload xətası');
-    } catch (error) {
-        console.error('Upload error:', error);
-        showSyncIndicator('Şəkil yüklənmədi!', 'error');
-        setTimeout(hideSyncIndicator, 2500);
-        return null;
-    }
-}
-
-// =============================================================================
-// GOOGLE SHEETS SİNXRONİZASİYA
-// =============================================================================
-async function syncToGoogleSheets() {
-    if (!CONFIG.GAS_URL) return;
-
-    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
-
-    const cleanSettings = { ...settings };
-
-    if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) {
-        delete cleanSettings.logo;
-    }
-    if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) {
-        delete cleanSettings.heroImage;
-    }
-
-    const payload = {
-        action: 'syncData',
-        data: {
-            categories,
-            products,
-            orders,
-            tables,
-            reservations,
-            settings: cleanSettings
-        }
-    };
-
-    try {
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showSyncIndicator('Sinxronizasiya edildi!', 'success');
-            showSyncBadge();
-        } else {
-            throw new Error(result.error || 'Naməlum xəta');
-        }
-    } catch (error) {
-        console.error('Sync error:', error);
-        showSyncIndicator('Sinxronizasiya xətası!', 'error');
-    }
-
-    setTimeout(hideSyncIndicator, 2500);
-}
-
-function debouncedSync() {
-    if (!CONFIG.AUTO_SYNC) return;
-    clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
-        syncToGoogleSheets();
-    }, CONFIG.SYNC_DELAY);
-}
-
-// =============================================================================
-// TƏRCÜMƏ
-// =============================================================================
 async function translateViaAppsScript(text, source, target) {
-    if (!text || !text.trim()) return '';
-
-    try {
-        const url = `${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.success) return data.translated || '';
-        return '';
-    } catch (error) {
-        console.error('Translation error:', error);
-        return '';
-    }
+  if (!text || !text.trim()) return '';
+  try {
+    const response = await fetch(`${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`);
+    const data = await response.json();
+    if (data.success) return data.translated || '';
+    return '';
+  } catch (e) {
+    console.error(e);
+    return '';
+  }
 }
 
 function handleProductFieldInput(fieldType, lang, value) {
-    const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
-    if (!autoTranslateEnabled) return;
-    if (isProductAutoTranslating) return;
+  const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
+  if (!autoTranslateEnabled || isProductAutoTranslating) return;
 
-    clearTimeout(productTranslateTimer);
+  clearTimeout(productTranslateTimer);
 
-    productTranslateTimer = setTimeout(async () => {
-        const cleanValue = (value || '').trim();
+  productTranslateTimer = setTimeout(async () => {
+    const cleanValue = (value || '').trim();
 
-        const targetIdMap = {
-            name: { az: 'prod-name-en', en: 'prod-name-az' },
-            desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
-        };
+    const targetIdMap = {
+      name: { az: 'prod-name-en', en: 'prod-name-az' },
+      desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
+    };
 
-        const targetLang = lang === 'az' ? 'en' : 'az';
-        const targetElementId = targetIdMap[fieldType][lang];
-        const targetElement = document.getElementById(targetElementId);
-        if (!targetElement) return;
+    const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
+    if (!targetElement) return;
 
-        if (!cleanValue) {
-            isProductAutoTranslating = true;
-            targetElement.value = '';
-            isProductAutoTranslating = false;
-            return;
-        }
+    if (!cleanValue) {
+      isProductAutoTranslating = true;
+      targetElement.value = '';
+      isProductAutoTranslating = false;
+      return;
+    }
 
-        isProductAutoTranslating = true;
-        const translatedText = await translateViaAppsScript(cleanValue, lang, targetLang);
-        if (translatedText) targetElement.value = translatedText;
-        isProductAutoTranslating = false;
-    }, 500);
+    isProductAutoTranslating = true;
+    const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
+    if (translatedText) targetElement.value = translatedText;
+    isProductAutoTranslating = false;
+  }, 500);
 }
 
 function translateCategoryName() {
-    const azText = document.getElementById('cat-name-az').value.trim();
-    const box = document.getElementById('cat-translation-box');
-    clearTimeout(categoryTranslateTimer);
+  const azText = document.getElementById('cat-name-az').value.trim();
+  const box = document.getElementById('cat-translation-box');
 
-    if (!azText) {
-        box.classList.add('hidden');
-        return;
+  clearTimeout(categoryTranslateTimer);
+
+  if (!azText) {
+    box.classList.add('hidden');
+    return;
+  }
+
+  categoryTranslateTimer = setTimeout(async () => {
+    const translated = await translateViaAppsScript(azText, 'az', 'en');
+    if (translated) {
+      box.classList.remove('hidden');
+      document.getElementById('cat-translated-text').textContent = translated;
+    } else {
+      box.classList.add('hidden');
+    }
+  }, 400);
+}
+
+async function uploadImageToDrive(base64Image, fileName) {
+  try {
+    showSyncIndicator('Şəkil yüklənir...', 'loading');
+
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'uploadImage',
+        image: base64Image,
+        fileName: fileName || `image_${Date.now()}.jpg`,
+        folderId: CONFIG.DRIVE_FOLDER_ID
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showSyncIndicator('Şəkil yükləndi!', 'success');
+      setTimeout(hideSyncIndicator, 1500);
+      return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
     }
 
-    categoryTranslateTimer = setTimeout(async () => {
-        const translated = await translateViaAppsScript(azText, 'az', 'en');
-        if (translated && translated !== azText) {
-            box.classList.remove('hidden');
-            document.getElementById('cat-translated-text').textContent = translated;
-        } else {
-            box.classList.add('hidden');
+    throw new Error(result.error || 'Upload error');
+  } catch (error) {
+    console.error('Upload error:', error);
+    showSyncIndicator('Şəkil yüklənmədi!', 'error');
+    setTimeout(hideSyncIndicator, 2500);
+    return null;
+  }
+}
+
+async function syncToGoogleSheets() {
+  try {
+    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
+
+    const cleanSettings = { ...settings };
+    if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
+    if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
+
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'syncData',
+        data: {
+          categories,
+          products,
+          orders,
+          tables,
+          reservations,
+          settings: cleanSettings
         }
-    }, 400);
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showSyncIndicator('Sinxronizasiya edildi!', 'success');
+      showSyncBadge();
+    } else {
+      throw new Error(result.error || 'Sync error');
+    }
+  } catch (error) {
+    console.error('Sync error:', error);
+    showSyncIndicator('Sinxronizasiya xətası!', 'error');
+  }
+
+  setTimeout(hideSyncIndicator, 2500);
 }
 
-// =============================================================================
-// AUTH
-// =============================================================================
+function debouncedSync() {
+  if (!CONFIG.AUTO_SYNC) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(syncToGoogleSheets, CONFIG.SYNC_DELAY);
+}
+
+async function loadInitialDataFromServer() {
+  try {
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`);
+    const data = await response.json();
+
+    if (Array.isArray(data.categories)) categories = data.categories;
+    if (Array.isArray(data.products)) products = data.products;
+    if (data.settings && typeof data.settings === 'object') settings = data.settings;
+    if (Array.isArray(data.tables)) tables = data.tables;
+    if (Array.isArray(data.orders)) orders = data.orders;
+    if (Array.isArray(data.reservations)) reservations = data.reservations;
+
+    localStorage.setItem('categories', JSON.stringify(categories));
+    localStorage.setItem('products', JSON.stringify(products));
+    localStorage.setItem('tables', JSON.stringify(tables));
+    localStorage.setItem('orders', JSON.stringify(orders));
+    localStorage.setItem('reservations', JSON.stringify(reservations));
+    localStorage.setItem('settings', JSON.stringify(settings));
+
+    currentLogo = settings.logo || null;
+    currentHeroImage = settings.heroImage || null;
+  } catch (e) {
+    console.error('Initial load error:', e);
+  }
+}
+
 function togglePassword() {
-    const input = document.getElementById('password');
-    const icon = document.getElementById('eye-icon');
-
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
+  const input = document.getElementById('password');
+  const icon = document.getElementById('eye-icon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
 }
 
-function handleLogin(e) {
-    e.preventDefault();
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (username === 'admin' && password === 'admin123') {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        initApp();
-    } else {
-        document.getElementById('login-error').classList.remove('hidden');
-    }
+  if (username === 'admin' && password === 'admin123') {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    await loadInitialDataFromServer();
+    initApp();
+  } else {
+    document.getElementById('login-error').classList.remove('hidden');
+  }
 }
 
 function logout() {
-    document.getElementById('main-app').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('password').value = '';
-    document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('password').value = '';
+  document.getElementById('login-error').classList.add('hidden');
 }
 
-// =============================================================================
-// PAGE NAVIGATION
-// =============================================================================
 function showPage(pageName) {
-    document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+  document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+  const selected = document.getElementById('page-' + pageName);
+  if (selected) selected.classList.remove('hidden');
 
-    const selectedPage = document.getElementById('page-' + pageName);
-    if (selectedPage) selectedPage.classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active', 'text-white');
+    item.classList.add('text-gray-300');
+  });
 
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active', 'text-white');
-        item.classList.add('text-gray-300');
-    });
+  const activeNav = document.getElementById('nav-' + pageName);
+  if (activeNav) {
+    activeNav.classList.add('active', 'text-white');
+    activeNav.classList.remove('text-gray-300');
+  }
 
-    const activeNav = document.getElementById('nav-' + pageName);
-    if (activeNav) {
-        activeNav.classList.add('active', 'text-white');
-        activeNav.classList.remove('text-gray-300');
-    }
+  const titles = {
+    dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
+    categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
+    products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
+    tables: ['Masalar', 'Masa və QR kodları idarə edin'],
+    settings: ['Parametrlər', 'Restoran məlumatları və konfiqurasiya']
+  };
 
-    const titles = {
-        dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
-        categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
-        products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
-        orders: ['Sifarişlər', 'Gələn sifarişləri idarə edin'],
-        reservations: ['Rezervasiyalar', 'Masa rezervasiyalarını idarə edin'],
-        tables: ['Masalar', 'Masa və QR kodları idarə edin'],
-        settings: ['Parametrlər', 'Restoran məlumatları və konfiqurasiya']
-    };
+  document.getElementById('page-title').textContent = titles[pageName][0];
+  document.getElementById('page-subtitle').textContent = titles[pageName][1];
 
-    document.getElementById('page-title').textContent = titles[pageName][0];
-    document.getElementById('page-subtitle').textContent = titles[pageName][1];
-
-    if (pageName === 'dashboard') {
-        setTimeout(initCharts, 100);
-        updateDashboard();
-    } else if (pageName === 'categories') {
-        renderCategories();
-    } else if (pageName === 'products') {
-        renderProducts();
-        updateCategoryFilter();
-    } else if (pageName === 'orders') {
-        renderOrders();
-    } else if (pageName === 'reservations') {
-        renderReservations();
-    } else if (pageName === 'tables') {
-        renderTables();
-    } else if (pageName === 'settings') {
-        loadSettings();
-    }
-}
-
-// =============================================================================
-// MƏHSUL
-// =============================================================================
-function openProductModal(productId = null) {
-    editingProductId = productId;
-    currentProductImages = [];
-    document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
-
-    document.getElementById('prod-name-az').value = '';
-    document.getElementById('prod-name-en').value = '';
-    document.getElementById('prod-desc-az').value = '';
-    document.getElementById('prod-desc-en').value = '';
-    document.getElementById('prod-category').value = '';
-    document.getElementById('prod-price').value = '';
-    document.getElementById('prod-volume').value = '';
-    document.getElementById('prod-time').value = '3min';
-    document.getElementById('prod-vat').value = '';
-    document.getElementById('prod-popular').checked = false;
-    document.getElementById('prod-new').checked = false;
-    document.getElementById('prod-recommended').checked = false;
-    document.getElementById('prod-available').checked = true;
-    document.getElementById('availability-label').textContent = 'Mövcuddur';
-    document.getElementById('availability-label').classList.remove('text-red-600');
-    document.getElementById('availability-label').classList.add('text-green-600');
-    document.getElementById('image-preview').innerHTML = '';
-
-    const catSelect = document.getElementById('prod-category');
-    catSelect.innerHTML = '<option value="">Seçin...</option>';
-    categories.forEach(cat => {
-        catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-    });
-
-    if (productId) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            document.getElementById('prod-name-az').value = product.nameAz || '';
-            document.getElementById('prod-name-en').value = product.nameEn || '';
-            document.getElementById('prod-desc-az').value = product.descAz || '';
-            document.getElementById('prod-desc-en').value = product.descEn || '';
-            document.getElementById('prod-category').value = product.categoryId;
-            document.getElementById('prod-price').value = product.price;
-            document.getElementById('prod-volume').value = product.specs?.volume || '';
-            document.getElementById('prod-time').value = product.specs?.time || '3min';
-            document.getElementById('prod-vat').value = product.vat || '';
-            document.getElementById('prod-popular').checked = !!product.popular;
-            document.getElementById('prod-new').checked = !!product.isNew;
-            document.getElementById('prod-recommended').checked = !!product.recommended;
-            document.getElementById('prod-available').checked = product.available !== false;
-
-            const availLabel = document.getElementById('availability-label');
-            if (product.available === false) {
-                availLabel.textContent = 'Bitdi';
-                availLabel.classList.remove('text-green-600');
-                availLabel.classList.add('text-red-600');
-            }
-
-            currentProductImages = Array.isArray(product.images) ? [...product.images] : [];
-            renderImagePreview();
-        }
-    }
-
-    document.getElementById('product-modal').classList.add('active');
-}
-
-function closeProductModal() {
-    document.getElementById('product-modal').classList.remove('active');
-    editingProductId = null;
-    currentProductImages = [];
-}
-
-async function saveProduct() {
-    const nameAz = document.getElementById('prod-name-az').value.trim();
-    const nameEn = document.getElementById('prod-name-en').value.trim();
-    const descAz = document.getElementById('prod-desc-az').value.trim();
-    const descEn = document.getElementById('prod-desc-en').value.trim();
-    const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
-    const price = safeNumber(document.getElementById('prod-price').value, 0);
-    const available = document.getElementById('prod-available').checked;
-
-    if (!nameAz || !nameEn || !categoryId || !price) {
-        alert('Zəhmət olmasa vacib xanaları doldurun!');
-        return;
-    }
-
-    const progressDiv = document.getElementById('upload-progress');
-    const totalImages = currentProductImages.length;
-    const uploadedImages = [];
-
-    if (totalImages > 0) {
-        progressDiv.classList.remove('hidden');
-    }
-
-    for (let i = 0; i < currentProductImages.length; i++) {
-        const img = currentProductImages[i];
-        const percent = Math.round(((i + 1) / totalImages) * 100);
-        document.getElementById('upload-percent').textContent = percent + '%';
-        document.getElementById('progress-fill').style.width = percent + '%';
-
-        if (typeof img === 'string' && img.startsWith('data:')) {
-            const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
-            uploadedImages.push(url || img);
-        } else {
-            uploadedImages.push(img);
-        }
-    }
-
-    progressDiv.classList.add('hidden');
-    document.getElementById('upload-percent').textContent = '0%';
-    document.getElementById('progress-fill').style.width = '0%';
-
-    const productData = {
-        id: editingProductId || Date.now(),
-        nameAz,
-        nameEn,
-        descAz,
-        descEn,
-        categoryId,
-        categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
-        price,
-        images: uploadedImages,
-        specs: {
-            volume: document.getElementById('prod-volume').value.trim(),
-            time: document.getElementById('prod-time').value.trim()
-        },
-        vat: document.getElementById('prod-vat').value.trim(),
-        popular: document.getElementById('prod-popular').checked,
-        isNew: document.getElementById('prod-new').checked,
-        recommended: document.getElementById('prod-recommended').checked,
-        available,
-        createdAt: editingProductId
-            ? (products.find(p => p.id === editingProductId)?.createdAt || new Date().toISOString())
-            : new Date().toISOString()
-    };
-
-    if (editingProductId) {
-        const index = products.findIndex(p => p.id === editingProductId);
-        if (index > -1) products[index] = productData;
-    } else {
-        products.push(productData);
-    }
-
-    localStorage.setItem('products', JSON.stringify(products));
-    autoSaveSettings();
-    await syncToGoogleSheets();
-    closeProductModal();
-    renderProducts();
-    updateStats();
+  if (pageName === 'dashboard') {
+    setTimeout(initCharts, 80);
     updateDashboard();
-}
-
-function renderProducts() {
-    const grid = document.getElementById('products-grid');
-    if (!grid) return;
-
-    const search = (document.getElementById('product-search')?.value || '').toLowerCase();
-    const categoryFilter = document.getElementById('category-filter')?.value || '';
-
-    const filtered = products.filter(p => {
-        const matchesSearch =
-            (p.nameAz || '').toLowerCase().includes(search) ||
-            (p.nameEn || '').toLowerCase().includes(search);
-
-        const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
-        return matchesSearch && matchesCategory;
-    });
-
-    document.getElementById('product-count-header').textContent = filtered.length;
-
-    if (!filtered.length) {
-        grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>';
-        return;
-    }
-
-    grid.innerHTML = filtered.map(product => {
-        const category = categories.find(c => Number(c.id) === Number(product.categoryId));
-
-        let imagesHtml = '';
-        if (product.images && product.images.length > 0) {
-            imagesHtml = '<div class="product-image-grid mt-3">';
-            product.images.forEach((img, idx) => {
-                const safeImg = String(img).replaceAll("'", "\\'");
-                imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="hover:opacity-80 transition-opacity cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-            });
-            imagesHtml += '</div>';
-        } else {
-            imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
-        }
-
-        const badges = [];
-        if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-star text-xs"></i> Populyar</span>');
-        if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-leaf text-xs"></i> Yeni</span>');
-        if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-thumbs-up text-xs"></i> Tövsiyə</span>');
-
-        const availBadge = product.available !== false
-            ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
-            : '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
-
-        return `
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover group ${product.available === false ? 'opacity-75' : ''}">
-                <div class="p-5">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex gap-2 flex-wrap">
-                            ${badges.join('')}
-                            ${availBadge}
-                        </div>
-                        <span class="text-lg font-bold text-gray-800">${product.price}₼</span>
-                    </div>
-
-                    <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
-                    <p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
-                    <p class="text-xs text-gray-400 mb-3">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
-
-                    ${product.specs?.volume ? `<p class="text-xs text-gray-400 mb-2"><i class="fas fa-glass-whiskey mr-1"></i>${escapeHtml(product.specs.volume)}</p>` : ''}
-
-                    ${imagesHtml}
-
-                    <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                        <button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg hover:opacity-80 transition-colors text-sm font-medium">
-                            ${product.available !== false ? '<i class="fas fa-times-circle mr-1"></i> Bitdi' : '<i class="fas fa-check-circle mr-1"></i> Mövcud'}
-                        </button>
-                        <button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function toggleProductAvailability(productId) {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-        product.available = product.available === false ? true : false;
-        localStorage.setItem('products', JSON.stringify(products));
-        renderProducts();
-        debouncedSync();
-    }
-}
-
-function filterProducts() {
+  } else if (pageName === 'categories') {
+    renderCategories();
+  } else if (pageName === 'products') {
     renderProducts();
+    updateCategoryFilter();
+  } else if (pageName === 'tables') {
+    renderTables();
+  } else if (pageName === 'settings') {
+    loadSettings();
+  }
 }
 
-function deleteProduct(id) {
-    if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
-        products = products.filter(p => p.id !== id);
-        localStorage.setItem('products', JSON.stringify(products));
-        autoSaveSettings();
-        renderProducts();
-        updateStats();
-        updateDashboard();
-        debouncedSync();
-    }
-}
-
-// =============================================================================
-// ŞƏKİL PREVIEW
-// =============================================================================
-function handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.classList.add('dragover');
-}
-
-function handleDragLeave(e) {
-    e.currentTarget.classList.remove('dragover');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
-    handleFiles(e.dataTransfer.files);
-}
-
-function handleFiles(files) {
-    Array.from(files).forEach(file => {
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                currentProductImages.push(ev.target.result);
-                renderImagePreview();
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-}
-
-function renderImagePreview() {
-    const container = document.getElementById('image-preview');
-    if (!container) return;
-
-    container.innerHTML = currentProductImages.map((img, index) => {
-        const safeImg = String(img).replaceAll("'", "\\'");
-        return `
-            <div class="image-item" onclick="viewImage('${safeImg}')">
-                <img src="${img}" alt="Preview ${index + 1}">
-                <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    }).join('');
-}
-
-function removeImage(index) {
-    currentProductImages.splice(index, 1);
-    renderImagePreview();
-}
-
-function viewImage(src) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
-        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    modal.onclick = () => modal.remove();
-    document.body.appendChild(modal);
-}
-
-// =============================================================================
-// KATEQORİYA
-// =============================================================================
 function openCategoryModal(categoryId = null) {
-    editingCategoryId = categoryId;
-    document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
-    document.getElementById('cat-name-az').value = '';
-    document.getElementById('cat-translation-box').classList.add('hidden');
-    document.getElementById('cat-icon').value = '🍽️';
-    document.getElementById('cat-sort').value = '0';
+  editingCategoryId = categoryId;
+  document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
+  document.getElementById('cat-name-az').value = '';
+  document.getElementById('cat-icon').value = '🍽️';
+  document.getElementById('cat-sort').value = '0';
+  document.getElementById('cat-translation-box').classList.add('hidden');
 
-    document.querySelectorAll('#icon-selector button').forEach(btn => {
-        btn.classList.remove('border-green-900', 'bg-green-50');
-    });
+  document.querySelectorAll('#icon-selector button').forEach(btn => {
+    btn.classList.remove('border-green-900', 'bg-green-50');
+  });
 
-    if (categoryId) {
-        const cat = categories.find(c => c.id === categoryId);
-        if (cat) {
-            document.getElementById('cat-name-az').value = cat.nameAz || '';
-            document.getElementById('cat-icon').value = cat.icon || '🍽️';
-            document.getElementById('cat-sort').value = cat.sortOrder || 0;
-            selectIcon(cat.icon || '🍽️');
+  if (categoryId) {
+    const cat = categories.find(c => c.id === categoryId);
+    if (cat) {
+      document.getElementById('cat-name-az').value = cat.nameAz || '';
+      document.getElementById('cat-icon').value = cat.icon || '🍽️';
+      document.getElementById('cat-sort').value = cat.sortOrder || 0;
+      selectIcon(cat.icon || '🍽️');
 
-            if (cat.nameEn) {
-                document.getElementById('cat-translation-box').classList.remove('hidden');
-                document.getElementById('cat-translated-text').textContent = cat.nameEn;
-            }
-        }
+      if (cat.nameEn) {
+        document.getElementById('cat-translation-box').classList.remove('hidden');
+        document.getElementById('cat-translated-text').textContent = cat.nameEn;
+      }
     }
+  }
 
-    document.getElementById('category-modal').classList.add('active');
+  document.getElementById('category-modal').classList.add('active');
 }
 
 function closeCategoryModal() {
-    document.getElementById('category-modal').classList.remove('active');
-    editingCategoryId = null;
+  document.getElementById('category-modal').classList.remove('active');
+  editingCategoryId = null;
 }
 
 function selectIcon(icon) {
-    document.getElementById('cat-icon').value = icon;
-    document.querySelectorAll('#icon-selector button').forEach(btn => {
-        btn.classList.remove('border-green-900', 'bg-green-50');
-        if (btn.textContent === icon) {
-            btn.classList.add('border-green-900', 'bg-green-50');
-        }
-    });
+  document.getElementById('cat-icon').value = icon;
+  document.querySelectorAll('#icon-selector button').forEach(btn => {
+    btn.classList.remove('border-green-900', 'bg-green-50');
+    if (btn.textContent === icon) {
+      btn.classList.add('border-green-900', 'bg-green-50');
+    }
+  });
 }
 
 async function saveCategory() {
-    const nameAz = document.getElementById('cat-name-az').value.trim();
-    const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
-    const icon = document.getElementById('cat-icon').value;
-    const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
+  const nameAz = document.getElementById('cat-name-az').value.trim();
+  const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
+  const icon = document.getElementById('cat-icon').value;
+  const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
 
-    if (!nameAz) {
-        alert('Zəhmət olmasa kateqoriya adını daxil edin!');
-        return;
-    }
+  if (!nameAz) {
+    alert('Kateqoriya adı daxil edin');
+    return;
+  }
 
-    const catData = {
-        id: editingCategoryId || Date.now(),
-        nameAz,
-        nameEn: nameEn || nameAz,
-        icon,
-        sortOrder,
-        active: true
-    };
+  const catData = {
+    id: editingCategoryId || Date.now(),
+    nameAz,
+    nameEn: nameEn || nameAz,
+    icon,
+    sortOrder,
+    active: true
+  };
 
-    if (editingCategoryId) {
-        const index = categories.findIndex(c => c.id === editingCategoryId);
-        if (index > -1) categories[index] = catData;
-    } else {
-        categories.push(catData);
-    }
+  if (editingCategoryId) {
+    const index = categories.findIndex(c => c.id === editingCategoryId);
+    if (index > -1) categories[index] = catData;
+  } else {
+    categories.push(catData);
+  }
 
-    localStorage.setItem('categories', JSON.stringify(categories));
-    closeCategoryModal();
-    renderCategories();
-    updateCategoryFilter();
-    updateStats();
-    await syncToGoogleSheets();
+  localStorage.setItem('categories', JSON.stringify(categories));
+  closeCategoryModal();
+  renderCategories();
+  updateCategoryFilter();
+  updateStats();
+  await syncToGoogleSheets();
 }
 
 function renderCategories() {
-    const grid = document.getElementById('categories-grid');
-    if (!grid) return;
+  const grid = document.getElementById('categories-grid');
+  const search = (document.getElementById('category-search').value || '').toLowerCase();
 
-    const search = (document.getElementById('category-search')?.value || '').toLowerCase();
+  const filtered = categories.filter(c =>
+    (c.nameAz || '').toLowerCase().includes(search) ||
+    (c.nameEn || '').toLowerCase().includes(search)
+  );
 
-    const filtered = categories.filter(c =>
-        (c.nameAz || '').toLowerCase().includes(search) ||
-        (c.nameEn || '').toLowerCase().includes(search)
-    );
+  document.getElementById('category-count').textContent = filtered.length;
 
-    document.getElementById('category-count').textContent = filtered.length;
-
-    grid.innerHTML = filtered.map(cat => `
-        <div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
-            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-2xl">
-                ${cat.icon}
-            </div>
-            <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
-            <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
-            <span class="status-badge bg-green-100 text-green-700">Aktiv</span>
-        </div>
-    `).join('');
+  grid.innerHTML = filtered.map(cat => `
+    <div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
+      <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon}</div>
+      <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
+      <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
+      <span class="status-badge bg-green-100 text-green-700">Aktiv</span>
+    </div>
+  `).join('');
 }
 
 function filterCategories() {
-    renderCategories();
+  renderCategories();
 }
 
 function updateCategoryFilter() {
-    const select = document.getElementById('category-filter');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
-    categories.forEach(cat => {
-        select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-    });
+  const select = document.getElementById('category-filter');
+  select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
+  categories.forEach(cat => {
+    select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+  });
 }
 
-// =============================================================================
-// MASA
-// =============================================================================
-function openTableModal(tableId = null) {
-    editingTableId = tableId;
-    document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
-    document.getElementById('table-number').value = '';
-    document.getElementById('table-capacity').value = '4';
-    document.getElementById('table-location').value = 'inside';
+function openProductModal(productId = null) {
+  editingProductId = productId;
+  currentProductImages = [];
+  document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
 
-    if (tableId) {
-        const table = tables.find(t => t.id === tableId);
-        if (table) {
-            document.getElementById('table-number').value = table.number || '';
-            document.getElementById('table-capacity').value = table.capacity || 4;
-            document.getElementById('table-location').value = table.location || 'inside';
-        }
+  document.getElementById('prod-name-az').value = '';
+  document.getElementById('prod-name-en').value = '';
+  document.getElementById('prod-desc-az').value = '';
+  document.getElementById('prod-desc-en').value = '';
+  document.getElementById('prod-category').value = '';
+  document.getElementById('prod-price').value = '';
+  document.getElementById('prod-volume').value = '';
+  document.getElementById('prod-time').value = '3min';
+  document.getElementById('prod-vat').value = '';
+  document.getElementById('prod-popular').checked = false;
+  document.getElementById('prod-new').checked = false;
+  document.getElementById('prod-recommended').checked = false;
+  document.getElementById('prod-available').checked = true;
+  document.getElementById('availability-label').textContent = 'Mövcuddur';
+  document.getElementById('availability-label').classList.remove('text-red-600');
+  document.getElementById('availability-label').classList.add('text-green-600');
+  document.getElementById('image-preview').innerHTML = '';
+
+  const catSelect = document.getElementById('prod-category');
+  catSelect.innerHTML = '<option value="">Seçin...</option>';
+  categories.forEach(cat => {
+    catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+  });
+
+  if (productId) {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      document.getElementById('prod-name-az').value = product.nameAz || '';
+      document.getElementById('prod-name-en').value = product.nameEn || '';
+      document.getElementById('prod-desc-az').value = product.descAz || '';
+      document.getElementById('prod-desc-en').value = product.descEn || '';
+      document.getElementById('prod-category').value = product.categoryId;
+      document.getElementById('prod-price').value = product.price;
+      document.getElementById('prod-volume').value = product.specs?.volume || '';
+      document.getElementById('prod-time').value = product.specs?.time || '3min';
+      document.getElementById('prod-vat').value = product.vat || '';
+      document.getElementById('prod-popular').checked = !!product.popular;
+      document.getElementById('prod-new').checked = !!product.isNew;
+      document.getElementById('prod-recommended').checked = !!product.recommended;
+      document.getElementById('prod-available').checked = product.available !== false;
+
+      if (product.available === false) {
+        document.getElementById('availability-label').textContent = 'Bitdi';
+        document.getElementById('availability-label').classList.remove('text-green-600');
+        document.getElementById('availability-label').classList.add('text-red-600');
+      }
+
+      currentProductImages = Array.isArray(product.images) ? [...product.images] : [];
+      renderImagePreview();
+    }
+  }
+
+  document.getElementById('product-modal').classList.add('active');
+}
+
+function closeProductModal() {
+  document.getElementById('product-modal').classList.remove('active');
+  editingProductId = null;
+  currentProductImages = [];
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+}
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        currentProductImages.push(ev.target.result);
+        renderImagePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+function renderImagePreview() {
+  const container = document.getElementById('image-preview');
+  container.innerHTML = currentProductImages.map((img, index) => {
+    const safeImg = String(img).replaceAll("'", "\\'");
+    return `
+      <div class="image-item" onclick="viewImage('${safeImg}')">
+        <img src="${img}" alt="Preview ${index + 1}">
+        <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeImage(index) {
+  currentProductImages.splice(index, 1);
+  renderImagePreview();
+}
+
+function viewImage(src) {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+  modal.innerHTML = `
+    <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
+    <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  modal.onclick = () => modal.remove();
+  document.body.appendChild(modal);
+}
+
+async function saveProduct() {
+  const nameAz = document.getElementById('prod-name-az').value.trim();
+  const nameEn = document.getElementById('prod-name-en').value.trim();
+  const descAz = document.getElementById('prod-desc-az').value.trim();
+  const descEn = document.getElementById('prod-desc-en').value.trim();
+  const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
+  const price = safeNumber(document.getElementById('prod-price').value, 0);
+  const available = document.getElementById('prod-available').checked;
+
+  if (!nameAz || !nameEn || !categoryId || !price) {
+    alert('Vacib xanaları doldurun');
+    return;
+  }
+
+  const progressDiv = document.getElementById('upload-progress');
+  const totalImages = currentProductImages.length;
+  const uploadedImages = [];
+
+  if (totalImages > 0) progressDiv.classList.remove('hidden');
+
+  for (let i = 0; i < currentProductImages.length; i++) {
+    const img = currentProductImages[i];
+    const percent = Math.round(((i + 1) / totalImages) * 100);
+    document.getElementById('upload-percent').textContent = percent + '%';
+    document.getElementById('progress-fill').style.width = percent + '%';
+
+    if (typeof img === 'string' && img.startsWith('data:')) {
+      const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
+      uploadedImages.push(url || img);
+    } else {
+      uploadedImages.push(img);
+    }
+  }
+
+  progressDiv.classList.add('hidden');
+  document.getElementById('upload-percent').textContent = '0%';
+  document.getElementById('progress-fill').style.width = '0%';
+
+  const productData = {
+    id: editingProductId || Date.now(),
+    nameAz,
+    nameEn,
+    descAz,
+    descEn,
+    categoryId,
+    categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
+    price,
+    images: uploadedImages,
+    specs: {
+      volume: document.getElementById('prod-volume').value.trim(),
+      time: document.getElementById('prod-time').value.trim()
+    },
+    vat: document.getElementById('prod-vat').value.trim(),
+    popular: document.getElementById('prod-popular').checked,
+    isNew: document.getElementById('prod-new').checked,
+    recommended: document.getElementById('prod-recommended').checked,
+    available,
+    createdAt: editingProductId
+      ? (products.find(p => p.id === editingProductId)?.createdAt || new Date().toISOString())
+      : new Date().toISOString()
+  };
+
+  if (editingProductId) {
+    const index = products.findIndex(p => p.id === editingProductId);
+    if (index > -1) products[index] = productData;
+  } else {
+    products.push(productData);
+  }
+
+  localStorage.setItem('products', JSON.stringify(products));
+  autoSaveSettings();
+  await syncToGoogleSheets();
+  closeProductModal();
+  renderProducts();
+  updateStats();
+  updateDashboard();
+}
+
+function renderProducts() {
+  const grid = document.getElementById('products-grid');
+  const search = (document.getElementById('product-search').value || '').toLowerCase();
+  const categoryFilter = document.getElementById('category-filter').value || '';
+
+  const filtered = products.filter(p => {
+    const matchesSearch =
+      (p.nameAz || '').toLowerCase().includes(search) ||
+      (p.nameEn || '').toLowerCase().includes(search);
+
+    const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
+    return matchesSearch && matchesCategory;
+  });
+
+  document.getElementById('product-count-header').textContent = filtered.length;
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(product => {
+    const category = categories.find(c => Number(c.id) === Number(product.categoryId));
+
+    let imagesHtml = '';
+    if (product.images && product.images.length > 0) {
+      imagesHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
+      product.images.forEach((img, idx) => {
+        const safeImg = String(img).replaceAll("'", "\\'");
+        imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
+      });
+      imagesHtml += '</div>';
+    } else {
+      imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
     }
 
-    document.getElementById('table-modal').classList.add('active');
+    const badges = [];
+    if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">Populyar</span>');
+    if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Yeni</span>');
+    if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">Tövsiyə</span>');
+
+    const availBadge = product.available !== false
+      ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
+      : '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
+
+    return `
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover ${product.available === false ? 'opacity-75' : ''}">
+        <div class="p-5">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex gap-2 flex-wrap">${badges.join('')}${availBadge}</div>
+            <span class="text-lg font-bold text-gray-800">${product.price}₼</span>
+          </div>
+
+          <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
+          <p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
+          <p class="text-xs text-gray-400 mb-3">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
+
+          ${product.specs?.volume ? `<p class="text-xs text-gray-400 mb-2">${escapeHtml(product.specs.volume)}</p>` : ''}
+          ${imagesHtml}
+
+          <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+            <button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg text-sm font-medium">
+              ${product.available !== false ? 'Bitdi' : 'Mövcud'}
+            </button>
+            <button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterProducts() {
+  renderProducts();
+}
+
+function toggleProductAvailability(productId) {
+  const product = products.find(p => p.id === productId);
+  if (product) {
+    product.available = product.available === false ? true : false;
+    localStorage.setItem('products', JSON.stringify(products));
+    renderProducts();
+    debouncedSync();
+  }
+}
+
+function deleteProduct(id) {
+  if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
+    products = products.filter(p => p.id !== id);
+    localStorage.setItem('products', JSON.stringify(products));
+    autoSaveSettings();
+    renderProducts();
+    updateStats();
+    updateDashboard();
+    debouncedSync();
+  }
+}
+
+function openTableModal(tableId = null) {
+  editingTableId = tableId;
+  document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
+  document.getElementById('table-number').value = '';
+  document.getElementById('table-capacity').value = '4';
+  document.getElementById('table-location').value = 'inside';
+
+  if (tableId) {
+    const table = tables.find(t => t.id === tableId);
+    if (table) {
+      document.getElementById('table-number').value = table.number || '';
+      document.getElementById('table-capacity').value = table.capacity || 4;
+      document.getElementById('table-location').value = table.location || 'inside';
+    }
+  }
+
+  document.getElementById('table-modal').classList.add('active');
 }
 
 function closeTableModal() {
-    document.getElementById('table-modal').classList.remove('active');
-    editingTableId = null;
+  document.getElementById('table-modal').classList.remove('active');
+  editingTableId = null;
 }
 
 async function saveTable() {
-    const number = document.getElementById('table-number').value.trim();
-    const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
-    const location = document.getElementById('table-location').value;
+  const number = document.getElementById('table-number').value.trim();
+  const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
+  const location = document.getElementById('table-location').value;
 
-    if (!number) {
-        alert('Zəhmət olmasa masa nömrəsini daxil edin!');
-        return;
-    }
+  if (!number) {
+    alert('Masa nömrəsi daxil edin');
+    return;
+  }
 
-    const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
-    const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
+  const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
+  const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
 
-    const tableData = {
-        id: editingTableId || Date.now(),
-        number,
-        capacity,
-        location,
-        qrUrl,
-        status: 'empty',
-        createdAt: editingTableId
-            ? (tables.find(t => t.id === editingTableId)?.createdAt || new Date().toISOString())
-            : new Date().toISOString()
-    };
+  const tableData = {
+    id: editingTableId || Date.now(),
+    number,
+    capacity,
+    location,
+    qrUrl,
+    status: 'empty',
+    createdAt: editingTableId
+      ? (tables.find(t => t.id === editingTableId)?.createdAt || new Date().toISOString())
+      : new Date().toISOString()
+  };
 
-    if (editingTableId) {
-        const index = tables.findIndex(t => t.id === editingTableId);
-        if (index > -1) tables[index] = { ...tables[index], ...tableData };
-    } else {
-        tables.push(tableData);
-    }
+  if (editingTableId) {
+    const index = tables.findIndex(t => t.id === editingTableId);
+    if (index > -1) tables[index] = { ...tables[index], ...tableData };
+  } else {
+    tables.push(tableData);
+  }
 
-    localStorage.setItem('tables', JSON.stringify(tables));
-    closeTableModal();
-    renderTables();
-    updateStats();
-    await syncToGoogleSheets();
+  localStorage.setItem('tables', JSON.stringify(tables));
+  closeTableModal();
+  renderTables();
+  updateStats();
+  await syncToGoogleSheets();
 }
 
 function renderTables() {
-    const grid = document.getElementById('tables-grid');
-    if (!grid) return;
+  const grid = document.getElementById('tables-grid');
+  document.getElementById('table-count').textContent = tables.length;
 
-    document.getElementById('table-count').textContent = tables.length;
+  if (!tables.length) {
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>';
+    return;
+  }
 
-    if (!tables.length) {
-        grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>';
-        return;
-    }
-
-    grid.innerHTML = tables.map(table => {
-        const locationLabels = {
-            inside: 'İçəri',
-            outside: 'Çöl',
-            terrace: 'Terras',
-            vip: 'VIP'
-        };
-
-        const statusColors = {
-            empty: { bg: 'bg-green-100', text: 'text-green-700', label: 'Boş' },
-            occupied: { bg: 'bg-red-100', text: 'text-red-700', label: 'Dolu' },
-            reserved: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Rezerv' }
-        };
-
-        const status = statusColors[table.status || 'empty'];
-
-        return `
-            <div class="bg-white rounded-2xl p-6 shadow-sm table-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
-                    <span class="status-badge ${status.bg} ${status.text} flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full ${status.text.replace('text', 'bg')}"></span>
-                        ${status.label}
-                    </span>
-                </div>
-                <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                    <span class="flex items-center gap-1"><i class="fas fa-users text-xs"></i> ${table.capacity} nəfər</span>
-                    <span class="flex items-center gap-1"><i class="fas fa-map-marker-alt text-xs"></i> ${locationLabels[table.location]}</span>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm">
-                        <i class="fas fa-qrcode"></i> QR Kod
-                    </button>
-                    <button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
+  grid.innerHTML = tables.map(table => {
+    const locationLabels = { inside:'İçəri', outside:'Çöl', terrace:'Terras', vip:'VIP' };
+    return `
+      <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
+          <span class="status-badge bg-green-100 text-green-700">Boş</span>
+        </div>
+        <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+          <span>${table.capacity} nəfər</span>
+          <span>${locationLabels[table.location]}</span>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
+            <i class="fas fa-qrcode"></i> QR Kod
+          </button>
+          <button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function deleteTable(id) {
-    if (confirm('Bu masanı silmək istədiyinizə əminsiniz?')) {
-        tables = tables.filter(t => t.id !== id);
-        localStorage.setItem('tables', JSON.stringify(tables));
-        renderTables();
-        updateStats();
-        debouncedSync();
-    }
+  if (confirm('Bu masanı silmək istədiyinizə əminsiniz?')) {
+    tables = tables.filter(t => t.id !== id);
+    localStorage.setItem('tables', JSON.stringify(tables));
+    renderTables();
+    updateStats();
+    debouncedSync();
+  }
 }
 
 function showQRCode(tableId) {
-    const table = tables.find(t => t.id === tableId);
-    if (!table) return;
+  const table = tables.find(t => t.id === tableId);
+  if (!table) return;
 
-    currentQRTable = table;
-    document.getElementById('qr-table-name').textContent = `Masa ${table.number}`;
+  currentQRTable = table;
+  document.getElementById('qr-table-name').textContent = `Masa ${table.number}`;
+  const qrContainer = document.getElementById('qr-code-display');
+  qrContainer.innerHTML = '';
 
-    const qrContainer = document.getElementById('qr-code-display');
-    qrContainer.innerHTML = '';
+  new QRCode(qrContainer, {
+    text: table.qrUrl,
+    width: 200,
+    height: 200,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
 
-    new QRCode(qrContainer, {
-        text: table.qrUrl,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
-
-    document.getElementById('qr-modal').classList.add('active');
+  document.getElementById('qr-modal').classList.add('active');
 }
 
 function closeQrModal() {
-    document.getElementById('qr-modal').classList.remove('active');
-    currentQRTable = null;
+  document.getElementById('qr-modal').classList.remove('active');
+  currentQRTable = null;
 }
 
 function downloadQR() {
-    const canvas = document.querySelector('#qr-code-display canvas');
-    if (canvas && currentQRTable) {
-        const link = document.createElement('a');
-        link.download = `QR_Masa_${currentQRTable.number}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-    }
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (canvas && currentQRTable) {
+    const link = document.createElement('a');
+    link.download = `QR_Masa_${currentQRTable.number}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  }
 }
 
 function printQR() {
-    const canvas = document.querySelector('#qr-code-display canvas');
-    if (canvas && currentQRTable) {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head><title>QR Kod - Masa ${currentQRTable.number}</title></head>
-                <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
-                    <div style="text-align:center;">
-                        <h2>Masa ${currentQRTable.number}</h2>
-                        <img src="${canvas.toDataURL()}" style="width:300px;height:300px;">
-                        <p>Menyuya baxmaq üçün skan edin</p>
-                    </div>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-    }
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (canvas && currentQRTable) {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head><title>QR Kod - Masa ${currentQRTable.number}</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
+          <div style="text-align:center;">
+            <h2>Masa ${currentQRTable.number}</h2>
+            <img src="${canvas.toDataURL()}" style="width:300px;height:300px;">
+            <p>Menyuya baxmaq üçün skan edin</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  }
 }
 
-// =============================================================================
-// REZERVASİYA
-// =============================================================================
-function openReservationModal() {
-    const tableSelect = document.getElementById('res-table');
-    tableSelect.innerHTML = '<option value="">Seçin...</option>';
-
-    tables.forEach(table => {
-        tableSelect.innerHTML += `<option value="${table.id}">Masa ${escapeHtml(table.number)} (${table.capacity} nəfər)</option>`;
-    });
-
-    document.getElementById('res-date').valueAsDate = new Date();
-    document.getElementById('res-time').value = '19:00';
-    document.getElementById('res-customer').value = '';
-    document.getElementById('res-phone').value = '';
-    document.getElementById('res-guests').value = '2';
-    document.getElementById('res-table').value = '';
-    document.getElementById('res-notes').value = '';
-
-    document.getElementById('reservation-modal').classList.add('active');
-}
-
-function closeReservationModal() {
-    document.getElementById('reservation-modal').classList.remove('active');
-}
-
-async function saveReservation() {
-    const customer = document.getElementById('res-customer').value.trim();
-    const phone = document.getElementById('res-phone').value.trim();
-    const date = document.getElementById('res-date').value;
-    const time = document.getElementById('res-time').value;
-    const guests = safeNumber(document.getElementById('res-guests').value, 2);
-    const tableId = document.getElementById('res-table').value;
-    const notes = document.getElementById('res-notes').value.trim();
-
-    if (!customer || !phone || !date || !time) {
-        alert('Zəhmət olmasa bütün vacib xanaları doldurun!');
-        return;
-    }
-
-    const table = tables.find(t => String(t.id) === String(tableId));
-
-    const reservationData = {
-        id: Date.now(),
-        customer,
-        phone,
-        date,
-        time,
-        guests,
-        tableId,
-        tableNumber: table ? table.number : '',
-        notes,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-    };
-
-    reservations.push(reservationData);
-    localStorage.setItem('reservations', JSON.stringify(reservations));
-
-    closeReservationModal();
-    renderReservations();
-    await syncToGoogleSheets();
-}
-
-function renderReservations() {
-    const container = document.getElementById('reservations-list');
-    if (!container) return;
-
-    document.getElementById('reservation-count').textContent = reservations.length;
-
-    if (!reservations.length) {
-        container.innerHTML = '<div class="text-center py-12 text-gray-500">Hələ rezervasiya yoxdur</div>';
-        return;
-    }
-
-    container.innerHTML = reservations.map(res => {
-        const statusColors = {
-            pending: { badge: 'bg-yellow-100 text-yellow-700', label: 'Gözləyən' },
-            confirmed: { badge: 'bg-green-100 text-green-700', label: 'Təsdiqləndi' },
-            cancelled: { badge: 'bg-red-100 text-red-700', label: 'Ləğv edildi' }
-        };
-
-        const status = statusColors[res.status] || statusColors.pending;
-
-        return `
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover ${res.status === 'pending' ? 'border-2 border-yellow-100' : ''}">
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <h4 class="font-semibold text-gray-800 text-lg">${escapeHtml(res.customer)}</h4>
-                        <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                            <span class="flex items-center gap-1"><i class="fas fa-phone text-xs"></i> ${escapeHtml(res.phone)}</span>
-                            <span class="flex items-center gap-1"><i class="fas fa-users text-xs"></i> ${res.guests} nəfər</span>
-                            ${res.tableNumber ? `<span class="flex items-center gap-1"><i class="fas fa-table text-xs"></i> Masa ${escapeHtml(res.tableNumber)}</span>` : ''}
-                        </div>
-                        <div class="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span class="flex items-center gap-1"><i class="fas fa-calendar text-xs"></i> ${escapeHtml(res.date)}</span>
-                            <span class="flex items-center gap-1"><i class="fas fa-clock text-xs"></i> ${escapeHtml(res.time)}</span>
-                        </div>
-                    </div>
-                    <span class="status-badge ${status.badge}">${status.label}</span>
-                </div>
-                ${res.notes ? `
-                    <div class="bg-blue-50 rounded-lg p-3 mb-4">
-                        <div class="flex items-center gap-2 text-sm text-blue-800">
-                            <i class="fas fa-info-circle"></i>
-                            <span>${escapeHtml(res.notes)}</span>
-                        </div>
-                    </div>
-                ` : ''}
-                ${res.status === 'pending' ? `
-                    <div class="flex gap-2 mt-4">
-                        <button onclick="confirmReservation(${res.id})" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">Təsdiqlə</button>
-                        <button onclick="cancelReservation(${res.id})" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">Ləğv et</button>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
-}
-
-function confirmReservation(id) {
-    const res = reservations.find(r => r.id === id);
-    if (res) {
-        res.status = 'confirmed';
-        localStorage.setItem('reservations', JSON.stringify(reservations));
-        renderReservations();
-        debouncedSync();
-    }
-}
-
-function cancelReservation(id) {
-    const res = reservations.find(r => r.id === id);
-    if (res) {
-        res.status = 'cancelled';
-        localStorage.setItem('reservations', JSON.stringify(reservations));
-        renderReservations();
-        debouncedSync();
-    }
-}
-
-// =============================================================================
-// SİFARİŞ
-// =============================================================================
-function renderOrders() {
-    const container = document.getElementById('orders-list');
-    if (!container) return;
-
-    const search = (document.getElementById('order-search')?.value || '').toLowerCase();
-    const statusFilter = document.getElementById('order-status-filter')?.value || '';
-
-    const filtered = orders.filter(o => {
-        const matchesSearch = (o.customer || '').toLowerCase().includes(search) || String(o.id || '').includes(search);
-        const matchesStatus = !statusFilter || o.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
-
-    document.getElementById('order-count').textContent = filtered.length;
-
-    if (!filtered.length) {
-        container.innerHTML = '<div class="text-center py-12 text-gray-500">Sifariş tapılmadı</div>';
-        return;
-    }
-
-    container.innerHTML = filtered.map(order => {
-        const statusColors = {
-            pending: { badge: 'bg-yellow-100 text-yellow-700', icon: 'fa-clock', text: 'Gözləyən' },
-            active: { badge: 'bg-blue-100 text-blue-700', icon: 'fa-spinner', text: 'Aktiv' },
-            completed: { badge: 'bg-green-100 text-green-700', icon: 'fa-check-circle', text: 'Tamamlandı' }
-        };
-
-        const style = statusColors[order.status] || statusColors.pending;
-
-        return `
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover ${order.status === 'pending' ? 'border-2 border-yellow-100' : ''}">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-gray-800">${escapeHtml(order.id || 'ORD-' + Date.now().toString().slice(-6))}</span>
-                        <span class="status-badge ${style.badge} flex items-center gap-1">
-                            <i class="fas ${style.icon} text-xs"></i> ${style.text}
-                        </span>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xl font-bold text-gray-800">${order.total}₼</div>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="text-sm text-gray-600 mb-1">${escapeHtml(order.customer || '')} · ${escapeHtml(order.table || '')}</div>
-                    <div class="text-sm text-gray-800">${escapeHtml(Array.isArray(order.items) ? order.items.join(', ') : (order.items || ''))}</div>
-                </div>
-                ${order.note ? `
-                    <div class="bg-yellow-50 rounded-lg p-3 mb-4">
-                        <div class="flex items-center gap-2 text-sm text-yellow-800">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>${escapeHtml(order.note)}</span>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
-}
-
-function filterOrders() {
-    renderOrders();
-}
-
-// =============================================================================
-// SETTINGS
-// =============================================================================
 async function handleLogoUpload(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const base64 = e.target.result;
-            const uploadedUrl = await uploadImageToDrive(base64, `logo_${Date.now()}.png`);
-
-            currentLogo = uploadedUrl || base64;
-            document.getElementById('logo-image').src = currentLogo;
-            document.getElementById('logo-image').classList.remove('hidden');
-            document.getElementById('logo-placeholder').classList.add('hidden');
-
-            autoSaveSettings();
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = e.target.result;
+      const uploadedUrl = await uploadImageToDrive(base64, `logo_${Date.now()}.png`);
+      currentLogo = uploadedUrl || base64;
+      document.getElementById('logo-image').src = currentLogo;
+      document.getElementById('logo-image').classList.remove('hidden');
+      document.getElementById('logo-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
 }
 
 function removeLogo() {
-    currentLogo = null;
-    document.getElementById('logo-image').classList.add('hidden');
-    document.getElementById('logo-placeholder').classList.remove('hidden');
-    document.getElementById('logo-image').src = '';
-    autoSaveSettings();
+  currentLogo = null;
+  document.getElementById('logo-image').classList.add('hidden');
+  document.getElementById('logo-placeholder').classList.remove('hidden');
+  document.getElementById('logo-image').src = '';
+  autoSaveSettings();
 }
 
 async function handleHeroImageUpload(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const base64 = e.target.result;
-            const uploadedUrl = await uploadImageToDrive(base64, `hero_${Date.now()}.jpg`);
-
-            currentHeroImage = uploadedUrl || base64;
-            document.getElementById('hero-image-preview').src = currentHeroImage;
-            document.getElementById('hero-image-preview').classList.remove('hidden');
-            document.getElementById('hero-image-placeholder').classList.add('hidden');
-
-            autoSaveSettings();
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = e.target.result;
+      const uploadedUrl = await uploadImageToDrive(base64, `hero_${Date.now()}.jpg`);
+      currentHeroImage = uploadedUrl || base64;
+      document.getElementById('hero-image-preview').src = currentHeroImage;
+      document.getElementById('hero-image-preview').classList.remove('hidden');
+      document.getElementById('hero-image-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
 }
 
 function removeHeroImage() {
-    currentHeroImage = null;
-    document.getElementById('hero-image-preview').src = '';
-    document.getElementById('hero-image-preview').classList.add('hidden');
-    document.getElementById('hero-image-placeholder').classList.remove('hidden');
-    autoSaveSettings();
+  currentHeroImage = null;
+  document.getElementById('hero-image-preview').src = '';
+  document.getElementById('hero-image-preview').classList.add('hidden');
+  document.getElementById('hero-image-placeholder').classList.remove('hidden');
+  autoSaveSettings();
 }
 
 function autoSaveSettings() {
-    const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
+  const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
 
-    settings = {
-        nameAz: document.getElementById('rest-name-az')?.value || '',
-        nameEn: document.getElementById('rest-name-en')?.value || '',
-        phone: document.getElementById('rest-phone')?.value || '',
-        email: document.getElementById('rest-email')?.value || '',
-        addressAz: document.getElementById('rest-address-az')?.value || '',
-        addressEn: document.getElementById('rest-address-en')?.value || '',
-        workWeekday: document.getElementById('rest-work-weekday')?.value || '07:00 - 24:00',
-        workWeekend: document.getElementById('rest-work-weekend')?.value || '07:00 - 24:00',
-        facebook: document.getElementById('social-facebook')?.value || '',
-        instagram: document.getElementById('social-instagram')?.value || '',
-        whatsapp: document.getElementById('social-whatsapp')?.value || '',
-        autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
-        smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
-        heroTitleAz: document.getElementById('hero-title-az')?.value || '',
-        heroTitleEn: document.getElementById('hero-title-en')?.value || '',
-        heroImage: currentHeroImage || '',
-        recommendedIds: JSON.stringify(recommendedIds),
-        logo: currentLogo || ''
-    };
+  settings = {
+    nameAz: document.getElementById('rest-name-az')?.value || '',
+    nameEn: document.getElementById('rest-name-en')?.value || '',
+    phone: document.getElementById('rest-phone')?.value || '',
+    email: document.getElementById('rest-email')?.value || '',
+    addressAz: document.getElementById('rest-address-az')?.value || '',
+    addressEn: document.getElementById('rest-address-en')?.value || '',
+    workWeekday: document.getElementById('rest-work-weekday')?.value || '07:00 - 24:00',
+    workWeekend: document.getElementById('rest-work-weekend')?.value || '07:00 - 24:00',
+    facebook: document.getElementById('social-facebook')?.value || '',
+    instagram: document.getElementById('social-instagram')?.value || '',
+    whatsapp: document.getElementById('social-whatsapp')?.value || '',
+    autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
+    smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
+    heroTitleAz: document.getElementById('hero-title-az')?.value || '',
+    heroTitleEn: document.getElementById('hero-title-en')?.value || '',
+    heroImage: currentHeroImage || '',
+    recommendedIds: JSON.stringify(recommendedIds),
+    logo: currentLogo || ''
+  };
 
-    localStorage.setItem('settings', JSON.stringify(settings));
-    debouncedSync();
+  localStorage.setItem('settings', JSON.stringify(settings));
+  debouncedSync();
 }
 
 function loadSettings() {
-    const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
+  const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
 
-    if (savedSettings.nameAz) document.getElementById('rest-name-az').value = savedSettings.nameAz;
-    if (savedSettings.nameEn) document.getElementById('rest-name-en').value = savedSettings.nameEn;
-    if (savedSettings.phone) document.getElementById('rest-phone').value = savedSettings.phone;
-    if (savedSettings.email) document.getElementById('rest-email').value = savedSettings.email;
-    if (savedSettings.addressAz) document.getElementById('rest-address-az').value = savedSettings.addressAz;
-    if (savedSettings.addressEn) document.getElementById('rest-address-en').value = savedSettings.addressEn;
-    if (savedSettings.workWeekday) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday;
-    if (savedSettings.workWeekend) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend;
-    if (savedSettings.facebook) document.getElementById('social-facebook').value = savedSettings.facebook;
-    if (savedSettings.instagram) document.getElementById('social-instagram').value = savedSettings.instagram;
-    if (savedSettings.whatsapp) document.getElementById('social-whatsapp').value = savedSettings.whatsapp;
-    if (savedSettings.autoTranslate !== undefined) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
-    if (document.getElementById('smart-search-enabled')) {
-        document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
-    }
-    if (document.getElementById('hero-title-az')) document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
-    if (document.getElementById('hero-title-en')) document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
+  if (savedSettings.nameAz) document.getElementById('rest-name-az').value = savedSettings.nameAz;
+  if (savedSettings.nameEn) document.getElementById('rest-name-en').value = savedSettings.nameEn;
+  if (savedSettings.phone) document.getElementById('rest-phone').value = savedSettings.phone;
+  if (savedSettings.email) document.getElementById('rest-email').value = savedSettings.email;
+  if (savedSettings.addressAz) document.getElementById('rest-address-az').value = savedSettings.addressAz;
+  if (savedSettings.addressEn) document.getElementById('rest-address-en').value = savedSettings.addressEn;
+  if (savedSettings.workWeekday) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday;
+  if (savedSettings.workWeekend) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend;
+  if (savedSettings.facebook) document.getElementById('social-facebook').value = savedSettings.facebook;
+  if (savedSettings.instagram) document.getElementById('social-instagram').value = savedSettings.instagram;
+  if (savedSettings.whatsapp) document.getElementById('social-whatsapp').value = savedSettings.whatsapp;
+  if (savedSettings.autoTranslate !== undefined) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
+  document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
+  document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
+  document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
 
-    if (savedSettings.logo) {
-        currentLogo = savedSettings.logo;
-        document.getElementById('logo-image').src = currentLogo;
-        document.getElementById('logo-image').classList.remove('hidden');
-        document.getElementById('logo-placeholder').classList.add('hidden');
-    }
+  if (savedSettings.logo) {
+    currentLogo = savedSettings.logo;
+    document.getElementById('logo-image').src = currentLogo;
+    document.getElementById('logo-image').classList.remove('hidden');
+    document.getElementById('logo-placeholder').classList.add('hidden');
+  }
 
-    if (savedSettings.heroImage) {
-        currentHeroImage = savedSettings.heroImage;
-        document.getElementById('hero-image-preview').src = currentHeroImage;
-        document.getElementById('hero-image-preview').classList.remove('hidden');
-        document.getElementById('hero-image-placeholder').classList.add('hidden');
-    }
+  if (savedSettings.heroImage) {
+    currentHeroImage = savedSettings.heroImage;
+    document.getElementById('hero-image-preview').src = currentHeroImage;
+    document.getElementById('hero-image-preview').classList.remove('hidden');
+    document.getElementById('hero-image-placeholder').classList.add('hidden');
+  }
 }
 
-// =============================================================================
-// DASHBOARD
-// =============================================================================
 function updateStats() {
-    document.getElementById('stat-products').textContent = products.length;
-    document.getElementById('stat-categories').textContent = categories.length;
-    document.getElementById('stat-tables').textContent = tables.length;
-    document.getElementById('order-badge').textContent = orders.filter(o => o.status === 'pending').length;
-    document.getElementById('stat-orders').textContent = orders.length;
+  document.getElementById('stat-products').textContent = products.length;
+  document.getElementById('stat-categories').textContent = categories.length;
+  document.getElementById('stat-tables').textContent = tables.length;
+  document.getElementById('stat-orders').textContent = orders.length;
 
-    const today = new Date().toDateString();
-    const todayRevenue = orders
-        .filter(o => o.status === 'completed' && o.createdAt && new Date(o.createdAt).toDateString() === today)
-        .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-
-    document.getElementById('stat-revenue').textContent = todayRevenue.toFixed(2) + '₼';
+  const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+  document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + '₼';
 }
 
 function updateDashboard() {
-    const recentOrders = orders.slice(-3).reverse();
-    const container = document.getElementById('recent-orders-list');
-    if (!container) return;
-
-    if (!recentOrders.length) {
-        container.innerHTML = '<p class="text-gray-500 text-sm">Hələ sifariş yoxdur</p>';
-    } else {
-        container.innerHTML = recentOrders.map(order => `
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                    <p class="font-medium text-sm text-gray-800">${escapeHtml(order.customer || '')}</p>
-                    <p class="text-xs text-gray-500">${escapeHtml(order.table || '')}</p>
-                </div>
-                <span class="font-bold text-sm text-gray-800">${order.total}₼</span>
-            </div>
-        `).join('');
-    }
-
-    const popularContainer = document.getElementById('popular-products-grid');
-    if (!popularContainer) return;
-
-    const popularProducts = products.filter(p => p.popular).slice(0, 3);
-
-    if (!popularProducts.length) {
-        popularContainer.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">Populyar məhsul yoxdur</div>';
-    } else {
-        popularContainer.innerHTML = popularProducts.map(p => {
-            const img = p.images?.[0] || 'https://via.placeholder.com/300x200?text=No+Image';
-            return `
-                <div class="bg-gray-50 rounded-xl p-4 flex gap-4 items-center">
-                    <img src="${img}" class="w-20 h-20 object-cover rounded-lg">
-                    <div>
-                        <h4 class="font-semibold text-gray-800">${escapeHtml(p.nameAz)}</h4>
-                        <p class="text-sm text-gray-500">${p.price}₼</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
+  if (!weeklyChart) initCharts();
 }
 
 function initCharts() {
-    const ctx = document.getElementById('weeklyOrdersChart');
-    if (!ctx) return;
+  const ctx = document.getElementById('weeklyOrdersChart');
+  if (!ctx) return;
 
-    if (weeklyChart) weeklyChart.destroy();
+  if (weeklyChart) weeklyChart.destroy();
 
-    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(5, 150, 105, 0.8)');
-    gradient.addColorStop(1, 'rgba(5, 150, 105, 0.1)');
-
-    weeklyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
-            datasets: [{
-                label: 'Sifarişlər',
-                data: [12, 19, 15, 25, 22, 30, 28],
-                backgroundColor: gradient,
-                borderColor: '#059669',
-                borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#0a1f0a',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    padding: 12,
-                    cornerRadius: 8,
-                    displayColors: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
-                    ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' }
-                },
-                x: {
-                    grid: { display: false, drawBorder: false },
-                    ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' }
-                }
-            }
-        }
-    });
+  weeklyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
+      datasets: [{
+        label: 'Sifarişlər',
+        data: [12, 19, 15, 25, 22, 30, 28],
+        backgroundColor: 'rgba(5, 150, 105, 0.6)',
+        borderColor: '#059669',
+        borderWidth: 2,
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display:false } },
+      scales: {
+        y: { beginAtZero:true },
+        x: { grid: { display:false } }
+      }
+    }
+  });
 }
 
-// =============================================================================
-// INIT
-// =============================================================================
 function initApp() {
-    updateStats();
-    renderCategories();
-    renderProducts();
-    renderTables();
-    renderOrders();
-    renderReservations();
-    updateCategoryFilter();
-    updateDashboard();
-    initCharts();
-    loadSettings();
+  updateStats();
+  renderCategories();
+  renderProducts();
+  renderTables();
+  updateCategoryFilter();
+  updateDashboard();
+  initCharts();
+  loadSettings();
 }
 
 document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'prod-available') {
-        const label = document.getElementById('availability-label');
-        if (e.target.checked) {
-            label.textContent = 'Mövcuddur';
-            label.classList.remove('text-red-600');
-            label.classList.add('text-green-600');
-        } else {
-            label.textContent = 'Bitdi';
-            label.classList.remove('text-green-600');
-            label.classList.add('text-red-600');
-        }
+  if (e.target && e.target.id === 'prod-available') {
+    const label = document.getElementById('availability-label');
+    if (e.target.checked) {
+      label.textContent = 'Mövcuddur';
+      label.classList.remove('text-red-600');
+      label.classList.add('text-green-600');
+    } else {
+      label.textContent = 'Bitdi';
+      label.classList.remove('text-green-600');
+      label.classList.add('text-red-600');
     }
+  }
 });
 
 window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.classList.remove('active');
-    }
+  if (event.target.classList.contains('modal')) {
+    event.target.classList.remove('active');
+  }
 };
 </script>
 
 </body>
 </html>
-
