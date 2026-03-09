@@ -847,21 +847,14 @@
         </div>
     </div>
 </div>
-<script>
+<script><script>
 // =============================================================================
-// KONFIQURASIYA - BURA ÖZ MƏLUMATLARINI YAZ
+// KONFIQURASIYA
 // =============================================================================
-
 const CONFIG = {
-    // Google Apps Script URL (Code.gs deploy edildikdən sonra alınan URL)
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbz3EzHoRDj3jGjJLy12AF-89352NBlpZOwrWHQFuCa2ydzvZVWxwLIdT9q3TkIYW_92xg/exec',
-    
-    // Google Drive Folder ID (şəkillər üçün)
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbyxFzMeb49MzbNO2Atx9-MOGfU1IDqog9W0omTCXb-yP4T9tGcFkhtSCVC3Y5IZlegRww/exec',
     DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
-    
-    // Google Sheet ID (məlumatlar üçün)
     SHEET_ID: '1S1TJ7FVqqsiIc07NeJMz9TcCrmpHSHyjHGEuoO4eCoM',
-    
     AUTO_SYNC: true,
     SYNC_DELAY: 2000
 };
@@ -869,13 +862,12 @@ const CONFIG = {
 // =============================================================================
 // GLOBAL DƏYİŞƏNLƏR
 // =============================================================================
-
-let categories = JSON.parse(localStorage.getItem('categories')) || [];
-let products = JSON.parse(localStorage.getItem('products')) || [];
-let orders = JSON.parse(localStorage.getItem('orders')) || [];
-let tables = JSON.parse(localStorage.getItem('tables')) || [];
-let reservations = JSON.parse(localStorage.getItem('reservations')) || [];
-let settings = JSON.parse(localStorage.getItem('settings')) || {};
+let categories = JSON.parse(localStorage.getItem('categories') || '[]');
+let products = JSON.parse(localStorage.getItem('products') || '[]');
+let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+let tables = JSON.parse(localStorage.getItem('tables') || '[]');
+let reservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+let settings = JSON.parse(localStorage.getItem('settings') || '{}');
 
 let currentProductImages = [];
 let editingProductId = null;
@@ -883,16 +875,16 @@ let editingCategoryId = null;
 let editingTableId = null;
 let currentQRTable = null;
 let syncTimeout = null;
-let currentLogo = null;
-let currentHeroImage = null;
+let currentLogo = settings.logo || null;
+let currentHeroImage = settings.heroImage || null;
 let productTranslateTimer = null;
 let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
+let weeklyChart = null;
 
 // =============================================================================
 // KÖMƏKÇİ FUNKSİYALAR
 // =============================================================================
-
 function escapeHtml(value = '') {
     return String(value)
         .replaceAll('&', '&amp;')
@@ -916,30 +908,42 @@ function hideSyncIndicator() {
 
 function showSyncBadge() {
     const badge = document.getElementById('sync-status-badge');
+    if (!badge) return;
     badge.classList.remove('hidden');
     setTimeout(() => badge.classList.add('hidden'), 3000);
+}
+
+function safeNumber(value, fallback = 0) {
+    const n = Number(value);
+    return isNaN(n) ? fallback : n;
+}
+
+function safeJsonParse(text, fallback) {
+    try {
+        return JSON.parse(text);
+    } catch {
+        return fallback;
+    }
 }
 
 // =============================================================================
 // GOOGLE DRIVE ŞƏKİL YÜKLƏMƏ
 // =============================================================================
-
 async function uploadImageToDrive(base64Image, fileName) {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
-        console.log('GAS_URL not configured, using local storage');
-        return base64Image;
-    }
+    if (!CONFIG.GAS_URL) return null;
 
     try {
         showSyncIndicator('Şəkil yüklənir...', 'loading');
 
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
                 action: 'uploadImage',
                 image: base64Image,
-                fileName: fileName || `product_${Date.now()}.jpg`,
+                fileName: fileName || `image_${Date.now()}.jpg`,
                 folderId: CONFIG.DRIVE_FOLDER_ID
             })
         });
@@ -948,48 +952,55 @@ async function uploadImageToDrive(base64Image, fileName) {
 
         if (result.success) {
             showSyncIndicator('Şəkil yükləndi!', 'success');
-            setTimeout(hideSyncIndicator, 2000);
-            return result.directUrl || result.thumbnailUrl;
-        } else {
-            throw new Error(result.error);
+            setTimeout(hideSyncIndicator, 1500);
+            return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
         }
+
+        throw new Error(result.error || 'Upload xətası');
     } catch (error) {
         console.error('Upload error:', error);
         showSyncIndicator('Şəkil yüklənmədi!', 'error');
-        setTimeout(hideSyncIndicator, 3000);
-        return base64Image; // Fallback to base64
+        setTimeout(hideSyncIndicator, 2500);
+        return null;
     }
 }
 
 // =============================================================================
-// GOOGLE SHEETS SINXRONIZASIYA
+// GOOGLE SHEETS SİNXRONİZASİYA
 // =============================================================================
-
 async function syncToGoogleSheets() {
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL.includes('YOUR_SCRIPT_ID')) {
-        console.log('GAS_URL not configured, skipping sync');
-        return;
-    }
+    if (!CONFIG.GAS_URL) return;
 
     showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
-    const data = {
-        categories: categories,
-        products: products,
-        orders: orders,
-        tables: tables,
-        reservations: reservations,
-        settings: settings
+    const cleanSettings = { ...settings };
+
+    if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) {
+        delete cleanSettings.logo;
+    }
+    if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) {
+        delete cleanSettings.heroImage;
+    }
+
+    const payload = {
+        action: 'syncData',
+        data: {
+            categories,
+            products,
+            orders,
+            tables,
+            reservations,
+            settings: cleanSettings
+        }
     };
 
     try {
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'syncData',
-                data: JSON.stringify(data)
-            })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
         const result = await response.json();
@@ -998,14 +1009,14 @@ async function syncToGoogleSheets() {
             showSyncIndicator('Sinxronizasiya edildi!', 'success');
             showSyncBadge();
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || 'Naməlum xəta');
         }
     } catch (error) {
         console.error('Sync error:', error);
         showSyncIndicator('Sinxronizasiya xətası!', 'error');
     }
-    
-    setTimeout(hideSyncIndicator, 2000);
+
+    setTimeout(hideSyncIndicator, 2500);
 }
 
 function debouncedSync() {
@@ -1017,11 +1028,11 @@ function debouncedSync() {
 }
 
 // =============================================================================
-// TƏRCÜMƏ FUNKSİYALARI
+// TƏRCÜMƏ
 // =============================================================================
-
 async function translateViaAppsScript(text, source, target) {
     if (!text || !text.trim()) return '';
+
     try {
         const url = `${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`;
         const response = await fetch(url);
@@ -1043,6 +1054,7 @@ function handleProductFieldInput(fieldType, lang, value) {
 
     productTranslateTimer = setTimeout(async () => {
         const cleanValue = (value || '').trim();
+
         const targetIdMap = {
             name: { az: 'prod-name-en', en: 'prod-name-az' },
             desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
@@ -1051,8 +1063,8 @@ function handleProductFieldInput(fieldType, lang, value) {
         const targetLang = lang === 'az' ? 'en' : 'az';
         const targetElementId = targetIdMap[fieldType][lang];
         const targetElement = document.getElementById(targetElementId);
-
         if (!targetElement) return;
+
         if (!cleanValue) {
             isProductAutoTranslating = true;
             targetElement.value = '';
@@ -1089,12 +1101,12 @@ function translateCategoryName() {
 }
 
 // =============================================================================
-// AUTHENTIFIKASIYA
+// AUTH
 // =============================================================================
-
 function togglePassword() {
     const input = document.getElementById('password');
     const icon = document.getElementById('eye-icon');
+
     if (input.type === 'password') {
         input.type = 'text';
         icon.classList.remove('fa-eye');
@@ -1108,6 +1120,7 @@ function togglePassword() {
 
 function handleLogin(e) {
     e.preventDefault();
+
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
@@ -1128,11 +1141,11 @@ function logout() {
 }
 
 // =============================================================================
-// SƏHİFƏ İDARƏETMƏ
+// PAGE NAVIGATION
 // =============================================================================
-
 function showPage(pageName) {
     document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+
     const selectedPage = document.getElementById('page-' + pageName);
     if (selectedPage) selectedPage.classList.remove('hidden');
 
@@ -1178,16 +1191,15 @@ function showPage(pageName) {
         loadSettings();
     }
 }
-    // =============================================================================
-// MƏHSUL FUNKSİYALARI
-// =============================================================================
 
+// =============================================================================
+// MƏHSUL
+// =============================================================================
 function openProductModal(productId = null) {
     editingProductId = productId;
     currentProductImages = [];
     document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
 
-    // Reset fields
     document.getElementById('prod-name-az').value = '';
     document.getElementById('prod-name-en').value = '';
     document.getElementById('prod-desc-az').value = '';
@@ -1206,14 +1218,12 @@ function openProductModal(productId = null) {
     document.getElementById('availability-label').classList.add('text-green-600');
     document.getElementById('image-preview').innerHTML = '';
 
-    // Fill categories
     const catSelect = document.getElementById('prod-category');
     catSelect.innerHTML = '<option value="">Seçin...</option>';
     categories.forEach(cat => {
         catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
     });
 
-    // Edit mode
     if (productId) {
         const product = products.find(p => p.id === productId);
         if (product) {
@@ -1226,9 +1236,9 @@ function openProductModal(productId = null) {
             document.getElementById('prod-volume').value = product.specs?.volume || '';
             document.getElementById('prod-time').value = product.specs?.time || '3min';
             document.getElementById('prod-vat').value = product.vat || '';
-            document.getElementById('prod-popular').checked = product.popular || false;
-            document.getElementById('prod-new').checked = product.isNew || false;
-            document.getElementById('prod-recommended').checked = product.recommended || false;
+            document.getElementById('prod-popular').checked = !!product.popular;
+            document.getElementById('prod-new').checked = !!product.isNew;
+            document.getElementById('prod-recommended').checked = !!product.recommended;
             document.getElementById('prod-available').checked = product.available !== false;
 
             const availLabel = document.getElementById('availability-label');
@@ -1238,7 +1248,7 @@ function openProductModal(productId = null) {
                 availLabel.classList.add('text-red-600');
             }
 
-            currentProductImages = product.images || [];
+            currentProductImages = Array.isArray(product.images) ? [...product.images] : [];
             renderImagePreview();
         }
     }
@@ -1257,8 +1267,8 @@ async function saveProduct() {
     const nameEn = document.getElementById('prod-name-en').value.trim();
     const descAz = document.getElementById('prod-desc-az').value.trim();
     const descEn = document.getElementById('prod-desc-en').value.trim();
-    const categoryId = parseInt(document.getElementById('prod-category').value);
-    const price = parseFloat(document.getElementById('prod-price').value);
+    const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
+    const price = safeNumber(document.getElementById('prod-price').value, 0);
     const available = document.getElementById('prod-available').checked;
 
     if (!nameAz || !nameEn || !categoryId || !price) {
@@ -1266,29 +1276,31 @@ async function saveProduct() {
         return;
     }
 
-    // Show progress
     const progressDiv = document.getElementById('upload-progress');
-    progressDiv.classList.remove('hidden');
-    
-    // Upload images to Drive
-    const uploadedImages = [];
     const totalImages = currentProductImages.length;
-    
+    const uploadedImages = [];
+
+    if (totalImages > 0) {
+        progressDiv.classList.remove('hidden');
+    }
+
     for (let i = 0; i < currentProductImages.length; i++) {
         const img = currentProductImages[i];
         const percent = Math.round(((i + 1) / totalImages) * 100);
         document.getElementById('upload-percent').textContent = percent + '%';
         document.getElementById('progress-fill').style.width = percent + '%';
-        
-        if (img.startsWith('data:')) {
+
+        if (typeof img === 'string' && img.startsWith('data:')) {
             const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
             uploadedImages.push(url || img);
         } else {
             uploadedImages.push(img);
         }
     }
-    
+
     progressDiv.classList.add('hidden');
+    document.getElementById('upload-percent').textContent = '0%';
+    document.getElementById('progress-fill').style.width = '0%';
 
     const productData = {
         id: editingProductId || Date.now(),
@@ -1297,64 +1309,71 @@ async function saveProduct() {
         descAz,
         descEn,
         categoryId,
-        categoryName: categories.find(c => c.id === categoryId)?.nameAz || '',
+        categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
         price,
         images: uploadedImages,
         specs: {
-            volume: document.getElementById('prod-volume').value,
-            time: document.getElementById('prod-time').value
+            volume: document.getElementById('prod-volume').value.trim(),
+            time: document.getElementById('prod-time').value.trim()
         },
-        vat: document.getElementById('prod-vat').value,
+        vat: document.getElementById('prod-vat').value.trim(),
         popular: document.getElementById('prod-popular').checked,
         isNew: document.getElementById('prod-new').checked,
         recommended: document.getElementById('prod-recommended').checked,
         available,
-        createdAt: editingProductId ? products.find(p => p.id === editingProductId)?.createdAt : new Date().toISOString()
+        createdAt: editingProductId
+            ? (products.find(p => p.id === editingProductId)?.createdAt || new Date().toISOString())
+            : new Date().toISOString()
     };
 
     if (editingProductId) {
         const index = products.findIndex(p => p.id === editingProductId);
-        products[index] = productData;
+        if (index > -1) products[index] = productData;
     } else {
         products.push(productData);
     }
 
     localStorage.setItem('products', JSON.stringify(products));
-    
-    // Sync to Google Sheets
+    autoSaveSettings();
     await syncToGoogleSheets();
-    
     closeProductModal();
     renderProducts();
     updateStats();
+    updateDashboard();
 }
 
 function renderProducts() {
     const grid = document.getElementById('products-grid');
-    const search = document.getElementById('product-search').value.toLowerCase();
-    const categoryFilter = document.getElementById('category-filter').value;
+    if (!grid) return;
 
-    let filtered = products.filter(p => {
-        const matchesSearch = (p.nameAz || '').toLowerCase().includes(search) || (p.nameEn || '').toLowerCase().includes(search);
-        const matchesCategory = !categoryFilter || p.categoryId === parseInt(categoryFilter);
+    const search = (document.getElementById('product-search')?.value || '').toLowerCase();
+    const categoryFilter = document.getElementById('category-filter')?.value || '';
+
+    const filtered = products.filter(p => {
+        const matchesSearch =
+            (p.nameAz || '').toLowerCase().includes(search) ||
+            (p.nameEn || '').toLowerCase().includes(search);
+
+        const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
         return matchesSearch && matchesCategory;
     });
 
     document.getElementById('product-count-header').textContent = filtered.length;
 
-    if (filtered.length === 0) {
+    if (!filtered.length) {
         grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>';
         return;
     }
 
     grid.innerHTML = filtered.map(product => {
-        const category = categories.find(c => c.id === product.categoryId);
+        const category = categories.find(c => Number(c.id) === Number(product.categoryId));
 
         let imagesHtml = '';
         if (product.images && product.images.length > 0) {
             imagesHtml = '<div class="product-image-grid mt-3">';
             product.images.forEach((img, idx) => {
-                imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="hover:opacity-80 transition-opacity cursor-pointer" onclick="event.stopPropagation(); viewImage('${img}')">`;
+                const safeImg = String(img).replaceAll("'", "\\'");
+                imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="hover:opacity-80 transition-opacity cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
             });
             imagesHtml += '</div>';
         } else {
@@ -1416,27 +1435,6 @@ function toggleProductAvailability(productId) {
     }
 }
 
-function viewImage(src) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
-        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    modal.onclick = () => modal.remove();
-    document.body.appendChild(modal);
-}
-
-function updateCategoryFilter() {
-    const select = document.getElementById('category-filter');
-    select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
-    categories.forEach(cat => {
-        select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-    });
-}
-
 function filterProducts() {
     renderProducts();
 }
@@ -1448,14 +1446,14 @@ function deleteProduct(id) {
         autoSaveSettings();
         renderProducts();
         updateStats();
+        updateDashboard();
         debouncedSync();
     }
 }
 
 // =============================================================================
-// ŞƏKİL YÜKLƏMƏ FUNKSİYALARI
+// ŞƏKİL PREVIEW
 // =============================================================================
-
 function handleDragOver(e) {
     e.preventDefault();
     e.currentTarget.classList.add('dragover');
@@ -1486,14 +1484,19 @@ function handleFiles(files) {
 
 function renderImagePreview() {
     const container = document.getElementById('image-preview');
-    container.innerHTML = currentProductImages.map((img, index) => `
-        <div class="image-item" onclick="viewImage('${img}')">
-            <img src="${img}" alt="Preview ${index + 1}">
-            <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `).join('');
+    if (!container) return;
+
+    container.innerHTML = currentProductImages.map((img, index) => {
+        const safeImg = String(img).replaceAll("'", "\\'");
+        return `
+            <div class="image-item" onclick="viewImage('${safeImg}')">
+                <img src="${img}" alt="Preview ${index + 1}">
+                <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
 }
 
 function removeImage(index) {
@@ -1501,10 +1504,22 @@ function removeImage(index) {
     renderImagePreview();
 }
 
-// =============================================================================
-// KATEQORIYA FUNKSİYALARI
-// =============================================================================
+function viewImage(src) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
+        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
+}
 
+// =============================================================================
+// KATEQORİYA
+// =============================================================================
 function openCategoryModal(categoryId = null) {
     editingCategoryId = categoryId;
     document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
@@ -1512,6 +1527,7 @@ function openCategoryModal(categoryId = null) {
     document.getElementById('cat-translation-box').classList.add('hidden');
     document.getElementById('cat-icon').value = '🍽️';
     document.getElementById('cat-sort').value = '0';
+
     document.querySelectorAll('#icon-selector button').forEach(btn => {
         btn.classList.remove('border-green-900', 'bg-green-50');
     });
@@ -1519,10 +1535,10 @@ function openCategoryModal(categoryId = null) {
     if (categoryId) {
         const cat = categories.find(c => c.id === categoryId);
         if (cat) {
-            document.getElementById('cat-name-az').value = cat.nameAz;
-            document.getElementById('cat-icon').value = cat.icon;
+            document.getElementById('cat-name-az').value = cat.nameAz || '';
+            document.getElementById('cat-icon').value = cat.icon || '🍽️';
             document.getElementById('cat-sort').value = cat.sortOrder || 0;
-            selectIcon(cat.icon);
+            selectIcon(cat.icon || '🍽️');
 
             if (cat.nameEn) {
                 document.getElementById('cat-translation-box').classList.remove('hidden');
@@ -1553,7 +1569,7 @@ async function saveCategory() {
     const nameAz = document.getElementById('cat-name-az').value.trim();
     const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
     const icon = document.getElementById('cat-icon').value;
-    const sortOrder = parseInt(document.getElementById('cat-sort').value) || 0;
+    const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
 
     if (!nameAz) {
         alert('Zəhmət olmasa kateqoriya adını daxil edin!');
@@ -1571,7 +1587,7 @@ async function saveCategory() {
 
     if (editingCategoryId) {
         const index = categories.findIndex(c => c.id === editingCategoryId);
-        categories[index] = catData;
+        if (index > -1) categories[index] = catData;
     } else {
         categories.push(catData);
     }
@@ -1579,15 +1595,18 @@ async function saveCategory() {
     localStorage.setItem('categories', JSON.stringify(categories));
     closeCategoryModal();
     renderCategories();
+    updateCategoryFilter();
     updateStats();
-    debouncedSync();
+    await syncToGoogleSheets();
 }
 
 function renderCategories() {
     const grid = document.getElementById('categories-grid');
-    const search = document.getElementById('category-search').value.toLowerCase();
+    if (!grid) return;
 
-    let filtered = categories.filter(c =>
+    const search = (document.getElementById('category-search')?.value || '').toLowerCase();
+
+    const filtered = categories.filter(c =>
         (c.nameAz || '').toLowerCase().includes(search) ||
         (c.nameEn || '').toLowerCase().includes(search)
     );
@@ -1609,10 +1628,20 @@ function renderCategories() {
 function filterCategories() {
     renderCategories();
 }
-    // =============================================================================
-// MASA FUNKSİYALARI
-// =============================================================================
 
+function updateCategoryFilter() {
+    const select = document.getElementById('category-filter');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
+    categories.forEach(cat => {
+        select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+    });
+}
+
+// =============================================================================
+// MASA
+// =============================================================================
 function openTableModal(tableId = null) {
     editingTableId = tableId;
     document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
@@ -1623,9 +1652,9 @@ function openTableModal(tableId = null) {
     if (tableId) {
         const table = tables.find(t => t.id === tableId);
         if (table) {
-            document.getElementById('table-number').value = table.number;
-            document.getElementById('table-capacity').value = table.capacity;
-            document.getElementById('table-location').value = table.location;
+            document.getElementById('table-number').value = table.number || '';
+            document.getElementById('table-capacity').value = table.capacity || 4;
+            document.getElementById('table-location').value = table.location || 'inside';
         }
     }
 
@@ -1637,9 +1666,9 @@ function closeTableModal() {
     editingTableId = null;
 }
 
-function saveTable() {
+async function saveTable() {
     const number = document.getElementById('table-number').value.trim();
-    const capacity = parseInt(document.getElementById('table-capacity').value) || 4;
+    const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
     const location = document.getElementById('table-location').value;
 
     if (!number) {
@@ -1657,12 +1686,14 @@ function saveTable() {
         location,
         qrUrl,
         status: 'empty',
-        createdAt: editingTableId ? tables.find(t => t.id === editingTableId)?.createdAt : new Date().toISOString()
+        createdAt: editingTableId
+            ? (tables.find(t => t.id === editingTableId)?.createdAt || new Date().toISOString())
+            : new Date().toISOString()
     };
 
     if (editingTableId) {
         const index = tables.findIndex(t => t.id === editingTableId);
-        tables[index] = { ...tables[index], ...tableData };
+        if (index > -1) tables[index] = { ...tables[index], ...tableData };
     } else {
         tables.push(tableData);
     }
@@ -1671,14 +1702,16 @@ function saveTable() {
     closeTableModal();
     renderTables();
     updateStats();
-    debouncedSync();
+    await syncToGoogleSheets();
 }
 
 function renderTables() {
     const grid = document.getElementById('tables-grid');
+    if (!grid) return;
+
     document.getElementById('table-count').textContent = tables.length;
 
-    if (tables.length === 0) {
+    if (!tables.length) {
         grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>';
         return;
     }
@@ -1767,7 +1800,7 @@ function closeQrModal() {
 
 function downloadQR() {
     const canvas = document.querySelector('#qr-code-display canvas');
-    if (canvas) {
+    if (canvas && currentQRTable) {
         const link = document.createElement('a');
         link.download = `QR_Masa_${currentQRTable.number}.png`;
         link.href = canvas.toDataURL();
@@ -1777,7 +1810,7 @@ function downloadQR() {
 
 function printQR() {
     const canvas = document.querySelector('#qr-code-display canvas');
-    if (canvas) {
+    if (canvas && currentQRTable) {
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
@@ -1797,12 +1830,12 @@ function printQR() {
 }
 
 // =============================================================================
-// REZERVASIYA FUNKSİYALARI
+// REZERVASİYA
 // =============================================================================
-
 function openReservationModal() {
     const tableSelect = document.getElementById('res-table');
     tableSelect.innerHTML = '<option value="">Seçin...</option>';
+
     tables.forEach(table => {
         tableSelect.innerHTML += `<option value="${table.id}">Masa ${escapeHtml(table.number)} (${table.capacity} nəfər)</option>`;
     });
@@ -1822,12 +1855,12 @@ function closeReservationModal() {
     document.getElementById('reservation-modal').classList.remove('active');
 }
 
-function saveReservation() {
+async function saveReservation() {
     const customer = document.getElementById('res-customer').value.trim();
     const phone = document.getElementById('res-phone').value.trim();
     const date = document.getElementById('res-date').value;
     const time = document.getElementById('res-time').value;
-    const guests = parseInt(document.getElementById('res-guests').value) || 2;
+    const guests = safeNumber(document.getElementById('res-guests').value, 2);
     const tableId = document.getElementById('res-table').value;
     const notes = document.getElementById('res-notes').value.trim();
 
@@ -1836,7 +1869,7 @@ function saveReservation() {
         return;
     }
 
-    const table = tables.find(t => t.id == tableId);
+    const table = tables.find(t => String(t.id) === String(tableId));
 
     const reservationData = {
         id: Date.now(),
@@ -1857,14 +1890,16 @@ function saveReservation() {
 
     closeReservationModal();
     renderReservations();
-    debouncedSync();
+    await syncToGoogleSheets();
 }
 
 function renderReservations() {
     const container = document.getElementById('reservations-list');
+    if (!container) return;
+
     document.getElementById('reservation-count').textContent = reservations.length;
 
-    if (reservations.length === 0) {
+    if (!reservations.length) {
         container.innerHTML = '<div class="text-center py-12 text-gray-500">Hələ rezervasiya yoxdur</div>';
         return;
     }
@@ -1875,7 +1910,8 @@ function renderReservations() {
             confirmed: { badge: 'bg-green-100 text-green-700', label: 'Təsdiqləndi' },
             cancelled: { badge: 'bg-red-100 text-red-700', label: 'Ləğv edildi' }
         };
-        const status = statusColors[res.status];
+
+        const status = statusColors[res.status] || statusColors.pending;
 
         return `
             <div class="bg-white rounded-2xl p-6 shadow-sm card-hover ${res.status === 'pending' ? 'border-2 border-yellow-100' : ''}">
@@ -1895,18 +1931,18 @@ function renderReservations() {
                     <span class="status-badge ${status.badge}">${status.label}</span>
                 </div>
                 ${res.notes ? `
-                <div class="bg-blue-50 rounded-lg p-3 mb-4">
-                    <div class="flex items-center gap-2 text-sm text-blue-800">
-                        <i class="fas fa-info-circle"></i>
-                        <span>${escapeHtml(res.notes)}</span>
+                    <div class="bg-blue-50 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2 text-sm text-blue-800">
+                            <i class="fas fa-info-circle"></i>
+                            <span>${escapeHtml(res.notes)}</span>
+                        </div>
                     </div>
-                </div>
                 ` : ''}
                 ${res.status === 'pending' ? `
-                <div class="flex gap-2 mt-4">
-                    <button onclick="confirmReservation(${res.id})" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">Təsdiqlə</button>
-                    <button onclick="cancelReservation(${res.id})" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">Ləğv et</button>
-                </div>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="confirmReservation(${res.id})" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">Təsdiqlə</button>
+                        <button onclick="cancelReservation(${res.id})" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">Ləğv et</button>
+                    </div>
                 ` : ''}
             </div>
         `;
@@ -1934,15 +1970,16 @@ function cancelReservation(id) {
 }
 
 // =============================================================================
-// SİFARİŞ FUNKSİYALARI
+// SİFARİŞ
 // =============================================================================
-
 function renderOrders() {
     const container = document.getElementById('orders-list');
-    const search = document.getElementById('order-search')?.value.toLowerCase() || '';
+    if (!container) return;
+
+    const search = (document.getElementById('order-search')?.value || '').toLowerCase();
     const statusFilter = document.getElementById('order-status-filter')?.value || '';
 
-    let filtered = orders.filter(o => {
+    const filtered = orders.filter(o => {
         const matchesSearch = (o.customer || '').toLowerCase().includes(search) || String(o.id || '').includes(search);
         const matchesStatus = !statusFilter || o.status === statusFilter;
         return matchesSearch && matchesStatus;
@@ -1950,7 +1987,7 @@ function renderOrders() {
 
     document.getElementById('order-count').textContent = filtered.length;
 
-    if (filtered.length === 0) {
+    if (!filtered.length) {
         container.innerHTML = '<div class="text-center py-12 text-gray-500">Sifariş tapılmadı</div>';
         return;
     }
@@ -1961,6 +1998,7 @@ function renderOrders() {
             active: { badge: 'bg-blue-100 text-blue-700', icon: 'fa-spinner', text: 'Aktiv' },
             completed: { badge: 'bg-green-100 text-green-700', icon: 'fa-check-circle', text: 'Tamamlandı' }
         };
+
         const style = statusColors[order.status] || statusColors.pending;
 
         return `
@@ -1981,12 +2019,12 @@ function renderOrders() {
                     <div class="text-sm text-gray-800">${escapeHtml(Array.isArray(order.items) ? order.items.join(', ') : (order.items || ''))}</div>
                 </div>
                 ${order.note ? `
-                <div class="bg-yellow-50 rounded-lg p-3 mb-4">
-                    <div class="flex items-center gap-2 text-sm text-yellow-800">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span>${escapeHtml(order.note)}</span>
+                    <div class="bg-yellow-50 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2 text-sm text-yellow-800">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>${escapeHtml(order.note)}</span>
+                        </div>
                     </div>
-                </div>
                 ` : ''}
             </div>
         `;
@@ -1998,17 +2036,20 @@ function filterOrders() {
 }
 
 // =============================================================================
-// PARAMETRLƏR (SETTINGS)
+// SETTINGS
 // =============================================================================
-
-function handleLogoUpload(input) {
+async function handleLogoUpload(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            currentLogo = e.target.result;
+        reader.onload = async function(e) {
+            const base64 = e.target.result;
+            const uploadedUrl = await uploadImageToDrive(base64, `logo_${Date.now()}.png`);
+
+            currentLogo = uploadedUrl || base64;
             document.getElementById('logo-image').src = currentLogo;
             document.getElementById('logo-image').classList.remove('hidden');
             document.getElementById('logo-placeholder').classList.add('hidden');
+
             autoSaveSettings();
         };
         reader.readAsDataURL(input.files[0]);
@@ -2023,14 +2064,18 @@ function removeLogo() {
     autoSaveSettings();
 }
 
-function handleHeroImageUpload(input) {
+async function handleHeroImageUpload(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            currentHeroImage = e.target.result;
+        reader.onload = async function(e) {
+            const base64 = e.target.result;
+            const uploadedUrl = await uploadImageToDrive(base64, `hero_${Date.now()}.jpg`);
+
+            currentHeroImage = uploadedUrl || base64;
             document.getElementById('hero-image-preview').src = currentHeroImage;
             document.getElementById('hero-image-preview').classList.remove('hidden');
             document.getElementById('hero-image-placeholder').classList.add('hidden');
+
             autoSaveSettings();
         };
         reader.readAsDataURL(input.files[0]);
@@ -2049,24 +2094,24 @@ function autoSaveSettings() {
     const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
 
     settings = {
-        nameAz: document.getElementById('rest-name-az').value,
-        nameEn: document.getElementById('rest-name-en').value,
-        phone: document.getElementById('rest-phone').value,
-        email: document.getElementById('rest-email').value,
+        nameAz: document.getElementById('rest-name-az')?.value || '',
+        nameEn: document.getElementById('rest-name-en')?.value || '',
+        phone: document.getElementById('rest-phone')?.value || '',
+        email: document.getElementById('rest-email')?.value || '',
         addressAz: document.getElementById('rest-address-az')?.value || '',
         addressEn: document.getElementById('rest-address-en')?.value || '',
         workWeekday: document.getElementById('rest-work-weekday')?.value || '07:00 - 24:00',
         workWeekend: document.getElementById('rest-work-weekend')?.value || '07:00 - 24:00',
-        facebook: document.getElementById('social-facebook').value,
-        instagram: document.getElementById('social-instagram').value,
-        whatsapp: document.getElementById('social-whatsapp').value,
-        autoTranslate: document.getElementById('auto-translate-enabled').checked,
+        facebook: document.getElementById('social-facebook')?.value || '',
+        instagram: document.getElementById('social-instagram')?.value || '',
+        whatsapp: document.getElementById('social-whatsapp')?.value || '',
+        autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
         smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
         heroTitleAz: document.getElementById('hero-title-az')?.value || '',
         heroTitleEn: document.getElementById('hero-title-en')?.value || '',
-        heroImage: currentHeroImage,
+        heroImage: currentHeroImage || '',
         recommendedIds: JSON.stringify(recommendedIds),
-        logo: currentLogo
+        logo: currentLogo || ''
     };
 
     localStorage.setItem('settings', JSON.stringify(settings));
@@ -2087,18 +2132,12 @@ function loadSettings() {
     if (savedSettings.facebook) document.getElementById('social-facebook').value = savedSettings.facebook;
     if (savedSettings.instagram) document.getElementById('social-instagram').value = savedSettings.instagram;
     if (savedSettings.whatsapp) document.getElementById('social-whatsapp').value = savedSettings.whatsapp;
-    if (savedSettings.autoTranslate !== undefined) {
-        document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
-    }
+    if (savedSettings.autoTranslate !== undefined) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
     if (document.getElementById('smart-search-enabled')) {
         document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
     }
-    if (document.getElementById('hero-title-az')) {
-        document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
-    }
-    if (document.getElementById('hero-title-en')) {
-        document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
-    }
+    if (document.getElementById('hero-title-az')) document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
+    if (document.getElementById('hero-title-en')) document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
 
     if (savedSettings.logo) {
         currentLogo = savedSettings.logo;
@@ -2116,9 +2155,8 @@ function loadSettings() {
 }
 
 // =============================================================================
-// DASHBOARD FUNKSİYALARI
+// DASHBOARD
 // =============================================================================
-
 function updateStats() {
     document.getElementById('stat-products').textContent = products.length;
     document.getElementById('stat-categories').textContent = categories.length;
@@ -2128,7 +2166,7 @@ function updateStats() {
 
     const today = new Date().toDateString();
     const todayRevenue = orders
-        .filter(o => o.status === 'completed' && new Date(o.createdAt).toDateString() === today)
+        .filter(o => o.status === 'completed' && o.createdAt && new Date(o.createdAt).toDateString() === today)
         .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
 
     document.getElementById('stat-revenue').textContent = todayRevenue.toFixed(2) + '₼';
@@ -2137,8 +2175,9 @@ function updateStats() {
 function updateDashboard() {
     const recentOrders = orders.slice(-3).reverse();
     const container = document.getElementById('recent-orders-list');
+    if (!container) return;
 
-    if (recentOrders.length === 0) {
+    if (!recentOrders.length) {
         container.innerHTML = '<p class="text-gray-500 text-sm">Hələ sifariş yoxdur</p>';
     } else {
         container.innerHTML = recentOrders.map(order => `
@@ -2153,9 +2192,11 @@ function updateDashboard() {
     }
 
     const popularContainer = document.getElementById('popular-products-grid');
+    if (!popularContainer) return;
+
     const popularProducts = products.filter(p => p.popular).slice(0, 3);
 
-    if (popularProducts.length === 0) {
+    if (!popularProducts.length) {
         popularContainer.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">Populyar məhsul yoxdur</div>';
     } else {
         popularContainer.innerHTML = popularProducts.map(p => {
@@ -2173,7 +2214,6 @@ function updateDashboard() {
     }
 }
 
-let weeklyChart = null;
 function initCharts() {
     const ctx = document.getElementById('weeklyOrdersChart');
     if (!ctx) return;
@@ -2227,6 +2267,9 @@ function initCharts() {
     });
 }
 
+// =============================================================================
+// INIT
+// =============================================================================
 function initApp() {
     updateStats();
     renderCategories();
@@ -2240,7 +2283,6 @@ function initApp() {
     loadSettings();
 }
 
-// Event listener for availability toggle
 document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'prod-available') {
         const label = document.getElementById('availability-label');
@@ -2256,7 +2298,6 @@ document.addEventListener('change', function(e) {
     }
 });
 
-// Close modal when clicking outside
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.classList.remove('active');
@@ -2266,5 +2307,6 @@ window.onclick = function(event) {
 
 </body>
 </html>
+
 
 
