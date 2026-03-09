@@ -71,6 +71,10 @@
     }
     .logo-preview img { width:100%; height:100%; object-fit:contain; }
     .specs-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+    .banner-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+    .banner-card { border:1px solid #e5e7eb; border-radius:14px; overflow:hidden; background:#fff; }
+    .banner-thumb { width:100%; height:120px; object-fit:cover; background:#f3f4f6; }
+    .switch-wrap { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; border-radius:14px; }
     @media (max-width:768px) { .specs-grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -276,6 +280,7 @@
         <!-- SETTINGS -->
         <div id="page-settings" class="page-content hidden fade-in">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
               <div class="flex items-center gap-2 mb-6">
                 <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -428,6 +433,125 @@
                 </div>
               </div>
             </div>
+
+            <!-- POPUP REKLAM -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <div class="flex items-center gap-2 mb-6">
+                <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-bullhorn text-rose-600"></i>
+                </div>
+                <h4 class="font-semibold text-gray-800">Açılış Popup Reklamı</h4>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                  <div class="switch-wrap bg-rose-50">
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Popup aktiv olsun</p>
+                      <p class="text-xs text-gray-500">Səhifə açılanda görünsün</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="popup-enabled" class="sr-only peer" onchange="autoSaveSettings()">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-rose-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    </label>
+                  </div>
+
+                  <div class="switch-wrap bg-amber-50">
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Yalnız ilk açılışda göstər</p>
+                      <p class="text-xs text-gray-500">İstəsən hər dəfə yox, 1 dəfə açılsın</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="popup-show-once" class="sr-only peer" onchange="autoSaveSettings()">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-amber-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2">Popup başlıq</label>
+                    <input type="text" id="popup-title" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2">Popup mətni</label>
+                    <textarea id="popup-text" rows="4" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2">Popup link</label>
+                    <input type="text" id="popup-link" placeholder="https://..." class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div class="w-full h-56 rounded-xl border border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <img id="popup-image-preview" src="" class="w-full h-full object-cover hidden">
+                    <div id="popup-image-placeholder" class="text-gray-400 text-sm text-center">
+                      <i class="fas fa-image text-2xl mb-2"></i>
+                      <div>Popup şəkli əlavə edin</div>
+                    </div>
+                  </div>
+
+                  <input type="file" id="popup-image-input" class="hidden" accept="image/*" onchange="handlePopupImageUpload(this)">
+
+                  <div class="flex gap-2">
+                    <button type="button" onclick="document.getElementById('popup-image-input').click()" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm">
+                      <i class="fas fa-upload mr-2"></i>Şəkil Seç
+                    </button>
+                    <button type="button" onclick="removePopupImage()" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+                      <i class="fas fa-trash mr-2"></i>Sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- BANNER SLIDER -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <div class="flex items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-images text-sky-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-gray-800">Banner Slider</h4>
+                </div>
+                <button type="button" onclick="document.getElementById('banner-images-input').click()" class="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm">
+                  <i class="fas fa-plus mr-2"></i>Banner əlavə et
+                </button>
+              </div>
+
+              <input type="file" id="banner-images-input" class="hidden" accept="image/*" multiple onchange="handleBannerFiles(this.files)">
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="switch-wrap bg-sky-50">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Slider aktiv olsun</p>
+                    <p class="text-xs text-gray-500">Menyu səhifəsində görünsün</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="banner-enabled" class="sr-only peer" onchange="autoSaveSettings()">
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Keçid intervalı (ms)</label>
+                  <input type="number" id="banner-interval" value="3000" min="1000" step="500" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-2">Başlıq</label>
+                  <input type="text" id="banner-title" placeholder="Məs: Günün təklifləri" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                </div>
+              </div>
+
+              <div id="banner-list" class="banner-list"></div>
+
+              <div id="banner-empty" class="text-sm text-gray-500 bg-gray-50 rounded-xl p-4">
+                Hələ banner əlavə edilməyib.
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -681,7 +805,7 @@ const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbw806z_YroS_HTIZ4iPmovUMCd7IKsXPsz6c_dA5rDSztLLIUBwnReKiskSWa-LRdZvCA/exec',
   DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
   AUTO_SYNC: true,
-  SYNC_DELAY: 1500
+  SYNC_DELAY: 350
 };
 
 let categories = JSON.parse(localStorage.getItem('categories') || '[]');
@@ -699,6 +823,8 @@ let currentQRTable = null;
 let syncTimeout = null;
 let currentLogo = settings.logo || null;
 let currentHeroImage = settings.heroImage || null;
+let currentPopupImage = settings.popupImage || null;
+let bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
 let productTranslateTimer = null;
 let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
@@ -734,6 +860,15 @@ function showSyncBadge() {
 function safeNumber(value, fallback = 0) {
   const n = Number(value);
   return isNaN(n) ? fallback : n;
+}
+
+function saveLocalState() {
+  localStorage.setItem('categories', JSON.stringify(categories));
+  localStorage.setItem('products', JSON.stringify(products));
+  localStorage.setItem('tables', JSON.stringify(tables));
+  localStorage.setItem('orders', JSON.stringify(orders));
+  localStorage.setItem('reservations', JSON.stringify(reservations));
+  localStorage.setItem('settings', JSON.stringify(settings));
 }
 
 async function translateViaAppsScript(text, source, target) {
@@ -777,7 +912,7 @@ function handleProductFieldInput(fieldType, lang, value) {
     const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
     if (translatedText) targetElement.value = translatedText;
     isProductAutoTranslating = false;
-  }, 500);
+  }, 350);
 }
 
 function translateCategoryName() {
@@ -799,7 +934,7 @@ function translateCategoryName() {
     } else {
       box.classList.add('hidden');
     }
-  }, 400);
+  }, 300);
 }
 
 async function uploadImageToDrive(base64Image, fileName) {
@@ -821,7 +956,7 @@ async function uploadImageToDrive(base64Image, fileName) {
 
     if (result.success) {
       showSyncIndicator('Şəkil yükləndi!', 'success');
-      setTimeout(hideSyncIndicator, 1500);
+      setTimeout(hideSyncIndicator, 1200);
       return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
     }
 
@@ -829,61 +964,86 @@ async function uploadImageToDrive(base64Image, fileName) {
   } catch (error) {
     console.error('Upload error:', error);
     showSyncIndicator('Şəkil yüklənmədi!', 'error');
-    setTimeout(hideSyncIndicator, 2500);
+    setTimeout(hideSyncIndicator, 2200);
     return null;
   }
 }
 
-async function syncToGoogleSheets() {
+function normalizeServerPayload(data) {
+  const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
+
+  return {
+    categories: Array.isArray(src.categories) ? src.categories : [],
+    products: Array.isArray(src.products) ? src.products : [],
+    orders: Array.isArray(src.orders) ? src.orders : [],
+    tables: Array.isArray(src.tables) ? src.tables : [],
+    reservations: Array.isArray(src.reservations) ? src.reservations : [],
+    settings: src.settings && typeof src.settings === 'object' ? src.settings : {}
+  };
+}
+
+async function syncToGoogleSheets(showToast = true) {
   try {
-    showSyncIndicator('Sinxronizasiya edilir...', 'loading');
+    if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
     const cleanSettings = { ...settings };
     if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
     if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
+    if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
+
+    const payload = {
+      categories,
+      products,
+      orders,
+      tables,
+      reservations,
+      settings: cleanSettings
+    };
 
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'syncData',
-        data: {
-          categories,
-          products,
-          orders,
-          tables,
-          reservations,
-          settings: cleanSettings
-        }
+        data: payload,
+        ...payload
       })
     });
 
     const result = await response.json();
 
     if (result.success) {
-      showSyncIndicator('Sinxronizasiya edildi!', 'success');
-      showSyncBadge();
+      if (showToast) {
+        showSyncIndicator('Sinxronizasiya edildi!', 'success');
+        showSyncBadge();
+      }
     } else {
       throw new Error(result.error || 'Sync error');
     }
   } catch (error) {
     console.error('Sync error:', error);
-    showSyncIndicator('Sinxronizasiya xətası!', 'error');
+    if (showToast) showSyncIndicator('Sinxronizasiya xətası!', 'error');
   }
 
-  setTimeout(hideSyncIndicator, 2500);
+  if (showToast) setTimeout(hideSyncIndicator, 2200);
 }
 
 function debouncedSync() {
   if (!CONFIG.AUTO_SYNC) return;
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(syncToGoogleSheets, CONFIG.SYNC_DELAY);
+  syncTimeout = setTimeout(() => syncToGoogleSheets(false), CONFIG.SYNC_DELAY);
+}
+
+function immediateSync() {
+  clearTimeout(syncTimeout);
+  return syncToGoogleSheets(true);
 }
 
 async function loadInitialDataFromServer() {
   try {
     const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`);
-    const data = await response.json();
+    const raw = await response.json();
+    const data = normalizeServerPayload(raw);
 
     if (Array.isArray(data.categories)) categories = data.categories;
     if (Array.isArray(data.products)) products = data.products;
@@ -892,15 +1052,12 @@ async function loadInitialDataFromServer() {
     if (Array.isArray(data.orders)) orders = data.orders;
     if (Array.isArray(data.reservations)) reservations = data.reservations;
 
-    localStorage.setItem('categories', JSON.stringify(categories));
-    localStorage.setItem('products', JSON.stringify(products));
-    localStorage.setItem('tables', JSON.stringify(tables));
-    localStorage.setItem('orders', JSON.stringify(orders));
-    localStorage.setItem('reservations', JSON.stringify(reservations));
-    localStorage.setItem('settings', JSON.stringify(settings));
-
     currentLogo = settings.logo || null;
     currentHeroImage = settings.heroImage || null;
+    currentPopupImage = settings.popupImage || null;
+    bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
+
+    saveLocalState();
   } catch (e) {
     console.error('Initial load error:', e);
   }
@@ -961,7 +1118,7 @@ function showPage(pageName) {
     categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
     products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
     tables: ['Masalar', 'Masa və QR kodları idarə edin'],
-    settings: ['Parametrlər', 'Restoran məlumatları və konfiqurasiya']
+    settings: ['Parametrlər', 'Restoran məlumatları, popup və banner konfiqurasiyası']
   };
 
   document.getElementById('page-title').textContent = titles[pageName][0];
@@ -995,7 +1152,7 @@ function openCategoryModal(categoryId = null) {
   });
 
   if (categoryId) {
-    const cat = categories.find(c => c.id === categoryId);
+    const cat = categories.find(c => Number(c.id) === Number(categoryId));
     if (cat) {
       document.getElementById('cat-name-az').value = cat.nameAz || '';
       document.getElementById('cat-icon').value = cat.icon || '🍽️';
@@ -1048,37 +1205,48 @@ async function saveCategory() {
   };
 
   if (editingCategoryId) {
-    const index = categories.findIndex(c => c.id === editingCategoryId);
+    const index = categories.findIndex(c => Number(c.id) === Number(editingCategoryId));
     if (index > -1) categories[index] = catData;
   } else {
-    categories.push(catData);
+    categories.unshift(catData);
   }
 
-  localStorage.setItem('categories', JSON.stringify(categories));
+  saveLocalState();
   closeCategoryModal();
   renderCategories();
   updateCategoryFilter();
   updateStats();
-  await syncToGoogleSheets();
+  updateDashboard();
+  await immediateSync();
 }
 
 function renderCategories() {
   const grid = document.getElementById('categories-grid');
   const search = (document.getElementById('category-search').value || '').toLowerCase();
 
-  const filtered = categories.filter(c =>
-    (c.nameAz || '').toLowerCase().includes(search) ||
-    (c.nameEn || '').toLowerCase().includes(search)
-  );
+  const filtered = [...categories]
+    .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .filter(c =>
+      (c.nameAz || '').toLowerCase().includes(search) ||
+      (c.nameEn || '').toLowerCase().includes(search)
+    );
 
   document.getElementById('category-count').textContent = filtered.length;
 
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>';
+    return;
+  }
+
   grid.innerHTML = filtered.map(cat => `
     <div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
-      <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon}</div>
+      <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon || '🍽️'}</div>
       <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
       <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
-      <span class="status-badge bg-green-100 text-green-700">Aktiv</span>
+      <div class="flex items-center justify-between mt-3">
+        <span class="status-badge bg-green-100 text-green-700">Aktiv</span>
+        <span class="text-xs text-gray-400">Sıra: ${safeNumber(cat.sortOrder, 0)}</span>
+      </div>
     </div>
   `).join('');
 }
@@ -1090,9 +1258,11 @@ function filterCategories() {
 function updateCategoryFilter() {
   const select = document.getElementById('category-filter');
   select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
-  categories.forEach(cat => {
-    select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-  });
+  [...categories]
+    .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .forEach(cat => {
+      select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+    });
 }
 
 function openProductModal(productId = null) {
@@ -1120,19 +1290,21 @@ function openProductModal(productId = null) {
 
   const catSelect = document.getElementById('prod-category');
   catSelect.innerHTML = '<option value="">Seçin...</option>';
-  categories.forEach(cat => {
-    catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-  });
+  [...categories]
+    .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .forEach(cat => {
+      catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+    });
 
   if (productId) {
-    const product = products.find(p => p.id === productId);
+    const product = products.find(p => Number(p.id) === Number(productId));
     if (product) {
       document.getElementById('prod-name-az').value = product.nameAz || '';
       document.getElementById('prod-name-en').value = product.nameEn || '';
       document.getElementById('prod-desc-az').value = product.descAz || '';
       document.getElementById('prod-desc-en').value = product.descEn || '';
-      document.getElementById('prod-category').value = product.categoryId;
-      document.getElementById('prod-price').value = product.price;
+      document.getElementById('prod-category').value = product.categoryId || '';
+      document.getElementById('prod-price').value = product.price || '';
       document.getElementById('prod-volume').value = product.specs?.volume || '';
       document.getElementById('prod-time').value = product.specs?.time || '3min';
       document.getElementById('prod-vat').value = product.vat || '';
@@ -1280,24 +1452,24 @@ async function saveProduct() {
     recommended: document.getElementById('prod-recommended').checked,
     available,
     createdAt: editingProductId
-      ? (products.find(p => p.id === editingProductId)?.createdAt || new Date().toISOString())
+      ? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
       : new Date().toISOString()
   };
 
   if (editingProductId) {
-    const index = products.findIndex(p => p.id === editingProductId);
+    const index = products.findIndex(p => Number(p.id) === Number(editingProductId));
     if (index > -1) products[index] = productData;
   } else {
-    products.push(productData);
+    products.unshift(productData);
   }
 
-  localStorage.setItem('products', JSON.stringify(products));
-  autoSaveSettings();
-  await syncToGoogleSheets();
+  autoSaveSettings(false);
+  saveLocalState();
   closeProductModal();
   renderProducts();
   updateStats();
   updateDashboard();
+  await immediateSync();
 }
 
 function renderProducts() {
@@ -1305,7 +1477,7 @@ function renderProducts() {
   const search = (document.getElementById('product-search').value || '').toLowerCase();
   const categoryFilter = document.getElementById('category-filter').value || '';
 
-  const filtered = products.filter(p => {
+  const filtered = [...products].filter(p => {
     const matchesSearch =
       (p.nameAz || '').toLowerCase().includes(search) ||
       (p.nameEn || '').toLowerCase().includes(search);
@@ -1350,7 +1522,7 @@ function renderProducts() {
         <div class="p-5">
           <div class="flex justify-between items-start mb-3">
             <div class="flex gap-2 flex-wrap">${badges.join('')}${availBadge}</div>
-            <span class="text-lg font-bold text-gray-800">${product.price}₼</span>
+            <span class="text-lg font-bold text-gray-800">${safeNumber(product.price).toFixed(2)}₼</span>
           </div>
 
           <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
@@ -1382,10 +1554,10 @@ function filterProducts() {
 }
 
 function toggleProductAvailability(productId) {
-  const product = products.find(p => p.id === productId);
+  const product = products.find(p => Number(p.id) === Number(productId));
   if (product) {
     product.available = product.available === false ? true : false;
-    localStorage.setItem('products', JSON.stringify(products));
+    saveLocalState();
     renderProducts();
     debouncedSync();
   }
@@ -1393,9 +1565,9 @@ function toggleProductAvailability(productId) {
 
 function deleteProduct(id) {
   if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
-    products = products.filter(p => p.id !== id);
-    localStorage.setItem('products', JSON.stringify(products));
-    autoSaveSettings();
+    products = products.filter(p => Number(p.id) !== Number(id));
+    autoSaveSettings(false);
+    saveLocalState();
     renderProducts();
     updateStats();
     updateDashboard();
@@ -1411,7 +1583,7 @@ function openTableModal(tableId = null) {
   document.getElementById('table-location').value = 'inside';
 
   if (tableId) {
-    const table = tables.find(t => t.id === tableId);
+    const table = tables.find(t => Number(t.id) === Number(tableId));
     if (table) {
       document.getElementById('table-number').value = table.number || '';
       document.getElementById('table-capacity').value = table.capacity || 4;
@@ -1448,22 +1620,22 @@ async function saveTable() {
     qrUrl,
     status: 'empty',
     createdAt: editingTableId
-      ? (tables.find(t => t.id === editingTableId)?.createdAt || new Date().toISOString())
+      ? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString())
       : new Date().toISOString()
   };
 
   if (editingTableId) {
-    const index = tables.findIndex(t => t.id === editingTableId);
+    const index = tables.findIndex(t => Number(t.id) === Number(editingTableId));
     if (index > -1) tables[index] = { ...tables[index], ...tableData };
   } else {
-    tables.push(tableData);
+    tables.unshift(tableData);
   }
 
-  localStorage.setItem('tables', JSON.stringify(tables));
+  saveLocalState();
   closeTableModal();
   renderTables();
   updateStats();
-  await syncToGoogleSheets();
+  await immediateSync();
 }
 
 function renderTables() {
@@ -1485,7 +1657,7 @@ function renderTables() {
         </div>
         <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
           <span>${table.capacity} nəfər</span>
-          <span>${locationLabels[table.location]}</span>
+          <span>${locationLabels[table.location] || 'İçəri'}</span>
         </div>
         <div class="flex gap-2">
           <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
@@ -1505,8 +1677,8 @@ function renderTables() {
 
 function deleteTable(id) {
   if (confirm('Bu masanı silmək istədiyinizə əminsiniz?')) {
-    tables = tables.filter(t => t.id !== id);
-    localStorage.setItem('tables', JSON.stringify(tables));
+    tables = tables.filter(t => Number(t.id) !== Number(id));
+    saveLocalState();
     renderTables();
     updateStats();
     debouncedSync();
@@ -1514,7 +1686,7 @@ function deleteTable(id) {
 }
 
 function showQRCode(tableId) {
-  const table = tables.find(t => t.id === tableId);
+  const table = tables.find(t => Number(t.id) === Number(tableId));
   if (!table) return;
 
   currentQRTable = table;
@@ -1618,7 +1790,112 @@ function removeHeroImage() {
   autoSaveSettings();
 }
 
-function autoSaveSettings() {
+async function handlePopupImageUpload(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = e.target.result;
+      const uploadedUrl = await uploadImageToDrive(base64, `popup_${Date.now()}.jpg`);
+      currentPopupImage = uploadedUrl || base64;
+      document.getElementById('popup-image-preview').src = currentPopupImage;
+      document.getElementById('popup-image-preview').classList.remove('hidden');
+      document.getElementById('popup-image-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function removePopupImage() {
+  currentPopupImage = null;
+  document.getElementById('popup-image-preview').src = '';
+  document.getElementById('popup-image-preview').classList.add('hidden');
+  document.getElementById('popup-image-placeholder').classList.remove('hidden');
+  autoSaveSettings();
+}
+
+async function handleBannerFiles(files) {
+  const list = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i];
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+
+    const uploadedUrl = await uploadImageToDrive(base64, `banner_${Date.now()}_${i}.jpg`);
+    bannerImages.push({
+      id: Date.now() + i,
+      image: uploadedUrl || base64,
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      active: true
+    });
+  }
+
+  renderBannerList();
+  autoSaveSettings();
+}
+
+function removeBanner(id) {
+  bannerImages = bannerImages.filter(item => Number(item.id) !== Number(id));
+  renderBannerList();
+  autoSaveSettings();
+}
+
+function toggleBannerStatus(id) {
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) {
+    item.active = item.active === false ? true : false;
+    renderBannerList();
+    autoSaveSettings();
+  }
+}
+
+function renderBannerList() {
+  const list = document.getElementById('banner-list');
+  const empty = document.getElementById('banner-empty');
+
+  if (!bannerImages.length) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  list.innerHTML = bannerImages.map(item => `
+    <div class="banner-card">
+      <img src="${item.image}" class="banner-thumb" alt="${escapeHtml(item.title || 'banner')}">
+      <div class="p-3">
+        <input
+          type="text"
+          value="${escapeHtml(item.title || '')}"
+          onchange="updateBannerTitle(${item.id}, this.value)"
+          class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3"
+          placeholder="Banner adı"
+        >
+        <div class="flex items-center justify-between gap-2">
+          <button onclick="toggleBannerStatus(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+            ${item.active !== false ? 'Aktiv' : 'Passiv'}
+          </button>
+          <button onclick="removeBanner(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-600">
+            Sil
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateBannerTitle(id, value) {
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) {
+    item.title = value || '';
+    autoSaveSettings();
+  }
+}
+
+function autoSaveSettings(triggerSync = true) {
   const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
 
   settings = {
@@ -1639,37 +1916,62 @@ function autoSaveSettings() {
     heroTitleEn: document.getElementById('hero-title-en')?.value || '',
     heroImage: currentHeroImage || '',
     recommendedIds: JSON.stringify(recommendedIds),
-    logo: currentLogo || ''
+    logo: currentLogo || '',
+
+    popupEnabled: !!document.getElementById('popup-enabled')?.checked,
+    popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
+    popupTitle: document.getElementById('popup-title')?.value || '',
+    popupText: document.getElementById('popup-text')?.value || '',
+    popupLink: document.getElementById('popup-link')?.value || '',
+    popupImage: currentPopupImage || '',
+
+    bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
+    bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
+    bannerTitle: document.getElementById('banner-title')?.value || '',
+    bannerImages: bannerImages
   };
 
-  localStorage.setItem('settings', JSON.stringify(settings));
-  debouncedSync();
+  saveLocalState();
+  if (triggerSync) debouncedSync();
 }
 
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
 
-  if (savedSettings.nameAz) document.getElementById('rest-name-az').value = savedSettings.nameAz;
-  if (savedSettings.nameEn) document.getElementById('rest-name-en').value = savedSettings.nameEn;
-  if (savedSettings.phone) document.getElementById('rest-phone').value = savedSettings.phone;
-  if (savedSettings.email) document.getElementById('rest-email').value = savedSettings.email;
-  if (savedSettings.addressAz) document.getElementById('rest-address-az').value = savedSettings.addressAz;
-  if (savedSettings.addressEn) document.getElementById('rest-address-en').value = savedSettings.addressEn;
-  if (savedSettings.workWeekday) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday;
-  if (savedSettings.workWeekend) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend;
-  if (savedSettings.facebook) document.getElementById('social-facebook').value = savedSettings.facebook;
-  if (savedSettings.instagram) document.getElementById('social-instagram').value = savedSettings.instagram;
-  if (savedSettings.whatsapp) document.getElementById('social-whatsapp').value = savedSettings.whatsapp;
-  if (savedSettings.autoTranslate !== undefined) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate;
+  document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
+  document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
+  document.getElementById('rest-phone').value = savedSettings.phone || '';
+  document.getElementById('rest-email').value = savedSettings.email || '';
+  document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
+  document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
+  document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
+  document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
+  document.getElementById('social-facebook').value = savedSettings.facebook || '';
+  document.getElementById('social-instagram').value = savedSettings.instagram || '';
+  document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
+  document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
   document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
   document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
   document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
+
+  document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
+  document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
+  document.getElementById('popup-title').value = savedSettings.popupTitle || '';
+  document.getElementById('popup-text').value = savedSettings.popupText || '';
+  document.getElementById('popup-link').value = savedSettings.popupLink || '';
+
+  document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
+  document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
+  document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
 
   if (savedSettings.logo) {
     currentLogo = savedSettings.logo;
     document.getElementById('logo-image').src = currentLogo;
     document.getElementById('logo-image').classList.remove('hidden');
     document.getElementById('logo-placeholder').classList.add('hidden');
+  } else {
+    document.getElementById('logo-image').classList.add('hidden');
+    document.getElementById('logo-placeholder').classList.remove('hidden');
   }
 
   if (savedSettings.heroImage) {
@@ -1677,7 +1979,23 @@ function loadSettings() {
     document.getElementById('hero-image-preview').src = currentHeroImage;
     document.getElementById('hero-image-preview').classList.remove('hidden');
     document.getElementById('hero-image-placeholder').classList.add('hidden');
+  } else {
+    document.getElementById('hero-image-preview').classList.add('hidden');
+    document.getElementById('hero-image-placeholder').classList.remove('hidden');
   }
+
+  if (savedSettings.popupImage) {
+    currentPopupImage = savedSettings.popupImage;
+    document.getElementById('popup-image-preview').src = currentPopupImage;
+    document.getElementById('popup-image-preview').classList.remove('hidden');
+    document.getElementById('popup-image-placeholder').classList.add('hidden');
+  } else {
+    document.getElementById('popup-image-preview').classList.add('hidden');
+    document.getElementById('popup-image-placeholder').classList.remove('hidden');
+  }
+
+  bannerImages = Array.isArray(savedSettings.bannerImages) ? savedSettings.bannerImages : [];
+  renderBannerList();
 }
 
 function updateStats() {
@@ -1760,4 +2078,3 @@ window.onclick = function(event) {
 
 </body>
 </html>
-
