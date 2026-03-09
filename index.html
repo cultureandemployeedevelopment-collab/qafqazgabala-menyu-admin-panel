@@ -802,10 +802,10 @@
 
 <script>
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby2ra2984Mp0V7EZZ-FJfdkRY9GQu5_8S7dmPs_w-HrJHFUvsObCqbdOu1fImWlatK-2g/exec',
-  DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
+  GAS_URL: 'BURAYA_APPS_SCRIPT_WEB_APP_LINKINI_YAZ',
+  DRIVE_FOLDER_ID: 'BURAYA_DRIVE_FOLDER_ID_YAZ',
   AUTO_SYNC: true,
-  SYNC_DELAY: 350
+  SYNC_DELAY: 400
 };
 
 let categories = JSON.parse(localStorage.getItem('categories') || '[]');
@@ -853,6 +853,7 @@ function hideSyncIndicator() {
 
 function showSyncBadge() {
   const badge = document.getElementById('sync-status-badge');
+  if (!badge) return;
   badge.classList.remove('hidden');
   setTimeout(() => badge.classList.add('hidden'), 2500);
 }
@@ -865,16 +866,50 @@ function safeNumber(value, fallback = 0) {
 function saveLocalState() {
   localStorage.setItem('categories', JSON.stringify(categories));
   localStorage.setItem('products', JSON.stringify(products));
-  localStorage.setItem('tables', JSON.stringify(tables));
   localStorage.setItem('orders', JSON.stringify(orders));
+  localStorage.setItem('tables', JSON.stringify(tables));
   localStorage.setItem('reservations', JSON.stringify(reservations));
   localStorage.setItem('settings', JSON.stringify(settings));
+}
+
+function parsePossibleJson(value, fallback) {
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeServerPayload(data) {
+  const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
+
+  const normalizedSettings = src.settings && typeof src.settings === 'object' ? src.settings : {};
+
+  if (typeof normalizedSettings.bannerImages === 'string') {
+    normalizedSettings.bannerImages = parsePossibleJson(normalizedSettings.bannerImages, []);
+  }
+  if (!Array.isArray(normalizedSettings.bannerImages)) {
+    normalizedSettings.bannerImages = [];
+  }
+
+  return {
+    categories: Array.isArray(src.categories) ? src.categories : [],
+    products: Array.isArray(src.products) ? src.products : [],
+    orders: Array.isArray(src.orders) ? src.orders : [],
+    tables: Array.isArray(src.tables) ? src.tables : [],
+    reservations: Array.isArray(src.reservations) ? src.reservations : [],
+    settings: normalizedSettings
+  };
 }
 
 async function translateViaAppsScript(text, source, target) {
   if (!text || !text.trim()) return '';
   try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`);
+    const response = await fetch(
+      `${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`
+    );
     const data = await response.json();
     if (data.success) return data.translated || '';
     return '';
@@ -969,16 +1004,24 @@ async function uploadImageToDrive(base64Image, fileName) {
   }
 }
 
-function normalizeServerPayload(data) {
-  const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
+function buildSyncPayload() {
+  const cleanSettings = { ...settings };
+
+  if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
+  if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
+  if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
+
+  if (!Array.isArray(cleanSettings.bannerImages)) {
+    cleanSettings.bannerImages = [];
+  }
 
   return {
-    categories: Array.isArray(src.categories) ? src.categories : [],
-    products: Array.isArray(src.products) ? src.products : [],
-    orders: Array.isArray(src.orders) ? src.orders : [],
-    tables: Array.isArray(src.tables) ? src.tables : [],
-    reservations: Array.isArray(src.reservations) ? src.reservations : [],
-    settings: src.settings && typeof src.settings === 'object' ? src.settings : {}
+    categories,
+    products,
+    orders,
+    tables,
+    reservations,
+    settings: cleanSettings
   };
 }
 
@@ -986,71 +1029,62 @@ async function syncToGoogleSheets(showToast = true) {
   try {
     if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
-    const cleanSettings = { ...settings };
-    if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
-    if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
-    if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
-
-    const payload = {
-      categories,
-      products,
-      orders,
-      tables,
-      reservations,
-      settings: cleanSettings
-    };
+    const payload = buildSyncPayload();
 
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'syncData',
-        data: payload,
-        ...payload
+        data: payload
       })
     });
 
     const result = await response.json();
 
-    if (result.success) {
-      if (showToast) {
-        showSyncIndicator('Sinxronizasiya edildi!', 'success');
-        showSyncBadge();
-      }
-    } else {
+    if (!result.success) {
       throw new Error(result.error || 'Sync error');
+    }
+
+    if (showToast) {
+      showSyncIndicator('Sinxronizasiya edildi!', 'success');
+      showSyncBadge();
+      setTimeout(hideSyncIndicator, 2200);
     }
   } catch (error) {
     console.error('Sync error:', error);
-    if (showToast) showSyncIndicator('Sinxronizasiya xətası!', 'error');
+    if (showToast) {
+      showSyncIndicator('Sinxronizasiya xətası!', 'error');
+      setTimeout(hideSyncIndicator, 2400);
+    }
   }
-
-  if (showToast) setTimeout(hideSyncIndicator, 2200);
 }
 
 function debouncedSync() {
   if (!CONFIG.AUTO_SYNC) return;
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => syncToGoogleSheets(false), CONFIG.SYNC_DELAY);
+  syncTimeout = setTimeout(() => {
+    syncToGoogleSheets(false);
+  }, CONFIG.SYNC_DELAY);
 }
 
-function immediateSync() {
+async function immediateSync() {
   clearTimeout(syncTimeout);
-  return syncToGoogleSheets(true);
+  await syncToGoogleSheets(true);
 }
 
 async function loadInitialDataFromServer() {
   try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`);
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { cache: 'no-store' });
     const raw = await response.json();
     const data = normalizeServerPayload(raw);
 
-    if (Array.isArray(data.categories)) categories = data.categories;
-    if (Array.isArray(data.products)) products = data.products;
-    if (data.settings && typeof data.settings === 'object') settings = data.settings;
-    if (Array.isArray(data.tables)) tables = data.tables;
-    if (Array.isArray(data.orders)) orders = data.orders;
-    if (Array.isArray(data.reservations)) reservations = data.reservations;
+    categories = data.categories;
+    products = data.products;
+    orders = data.orders;
+    tables = data.tables;
+    reservations = data.reservations;
+    settings = data.settings;
 
     currentLogo = settings.logo || null;
     currentHeroImage = settings.heroImage || null;
@@ -1118,7 +1152,7 @@ function showPage(pageName) {
     categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
     products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
     tables: ['Masalar', 'Masa və QR kodları idarə edin'],
-    settings: ['Parametrlər', 'Restoran məlumatları, popup və banner konfiqurasiyası']
+    settings: ['Parametrlər', 'Restoran məlumatları və banner konfiqurasiyası']
   };
 
   document.getElementById('page-title').textContent = titles[pageName][0];
@@ -1201,7 +1235,10 @@ async function saveCategory() {
     nameEn: nameEn || nameAz,
     icon,
     sortOrder,
-    active: true
+    active: true,
+    createdAt: editingCategoryId
+      ? (categories.find(c => Number(c.id) === Number(editingCategoryId))?.createdAt || new Date().toISOString())
+      : new Date().toISOString()
   };
 
   if (editingCategoryId) {
@@ -1222,7 +1259,7 @@ async function saveCategory() {
 
 function renderCategories() {
   const grid = document.getElementById('categories-grid');
-  const search = (document.getElementById('category-search').value || '').toLowerCase();
+  const search = (document.getElementById('category-search')?.value || '').toLowerCase();
 
   const filtered = [...categories]
     .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
@@ -1257,6 +1294,8 @@ function filterCategories() {
 
 function updateCategoryFilter() {
   const select = document.getElementById('category-filter');
+  if (!select) return;
+
   select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
   [...categories]
     .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
@@ -1432,6 +1471,10 @@ async function saveProduct() {
   document.getElementById('upload-percent').textContent = '0%';
   document.getElementById('progress-fill').style.width = '0%';
 
+  const existingCreatedAt = editingProductId
+    ? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
+    : new Date().toISOString();
+
   const productData = {
     id: editingProductId || Date.now(),
     nameAz,
@@ -1451,9 +1494,7 @@ async function saveProduct() {
     isNew: document.getElementById('prod-new').checked,
     recommended: document.getElementById('prod-recommended').checked,
     available,
-    createdAt: editingProductId
-      ? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
-      : new Date().toISOString()
+    createdAt: existingCreatedAt
   };
 
   if (editingProductId) {
@@ -1474,8 +1515,8 @@ async function saveProduct() {
 
 function renderProducts() {
   const grid = document.getElementById('products-grid');
-  const search = (document.getElementById('product-search').value || '').toLowerCase();
-  const categoryFilter = document.getElementById('category-filter').value || '';
+  const search = (document.getElementById('product-search')?.value || '').toLowerCase();
+  const categoryFilter = document.getElementById('category-filter')?.value || '';
 
   const filtered = [...products].filter(p => {
     const matchesSearch =
@@ -1612,6 +1653,10 @@ async function saveTable() {
   const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
   const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
 
+  const createdAt = editingTableId
+    ? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString())
+    : new Date().toISOString();
+
   const tableData = {
     id: editingTableId || Date.now(),
     number,
@@ -1619,9 +1664,7 @@ async function saveTable() {
     location,
     qrUrl,
     status: 'empty',
-    createdAt: editingTableId
-      ? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString())
-      : new Date().toISOString()
+    createdAt
   };
 
   if (editingTableId) {
@@ -1852,9 +1895,18 @@ function toggleBannerStatus(id) {
   }
 }
 
+function updateBannerTitle(id, value) {
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) {
+    item.title = value || '';
+    autoSaveSettings();
+  }
+}
+
 function renderBannerList() {
   const list = document.getElementById('banner-list');
   const empty = document.getElementById('banner-empty');
+  if (!list || !empty) return;
 
   if (!bannerImages.length) {
     list.innerHTML = '';
@@ -1887,14 +1939,6 @@ function renderBannerList() {
   `).join('');
 }
 
-function updateBannerTitle(id, value) {
-  const item = bannerImages.find(b => Number(b.id) === Number(id));
-  if (item) {
-    item.title = value || '';
-    autoSaveSettings();
-  }
-}
-
 function autoSaveSettings(triggerSync = true) {
   const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
 
@@ -1917,14 +1961,12 @@ function autoSaveSettings(triggerSync = true) {
     heroImage: currentHeroImage || '',
     recommendedIds: JSON.stringify(recommendedIds),
     logo: currentLogo || '',
-
     popupEnabled: !!document.getElementById('popup-enabled')?.checked,
     popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
     popupTitle: document.getElementById('popup-title')?.value || '',
     popupText: document.getElementById('popup-text')?.value || '',
     popupLink: document.getElementById('popup-link')?.value || '',
     popupImage: currentPopupImage || '',
-
     bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
     bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
     bannerTitle: document.getElementById('banner-title')?.value || '',
@@ -1938,40 +1980,37 @@ function autoSaveSettings(triggerSync = true) {
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
 
-  document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
-  document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
-  document.getElementById('rest-phone').value = savedSettings.phone || '';
-  document.getElementById('rest-email').value = savedSettings.email || '';
-  document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
-  document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
-  document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
-  document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
-  document.getElementById('social-facebook').value = savedSettings.facebook || '';
-  document.getElementById('social-instagram').value = savedSettings.instagram || '';
-  document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
-  document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
-  document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
-  document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
-  document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
+  if (document.getElementById('rest-name-az')) document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
+  if (document.getElementById('rest-name-en')) document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
+  if (document.getElementById('rest-phone')) document.getElementById('rest-phone').value = savedSettings.phone || '';
+  if (document.getElementById('rest-email')) document.getElementById('rest-email').value = savedSettings.email || '';
+  if (document.getElementById('rest-address-az')) document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
+  if (document.getElementById('rest-address-en')) document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
+  if (document.getElementById('rest-work-weekday')) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
+  if (document.getElementById('rest-work-weekend')) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
+  if (document.getElementById('social-facebook')) document.getElementById('social-facebook').value = savedSettings.facebook || '';
+  if (document.getElementById('social-instagram')) document.getElementById('social-instagram').value = savedSettings.instagram || '';
+  if (document.getElementById('social-whatsapp')) document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
+  if (document.getElementById('auto-translate-enabled')) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
+  if (document.getElementById('smart-search-enabled')) document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
+  if (document.getElementById('hero-title-az')) document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
+  if (document.getElementById('hero-title-en')) document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
 
-  document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
-  document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
-  document.getElementById('popup-title').value = savedSettings.popupTitle || '';
-  document.getElementById('popup-text').value = savedSettings.popupText || '';
-  document.getElementById('popup-link').value = savedSettings.popupLink || '';
+  if (document.getElementById('popup-enabled')) document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
+  if (document.getElementById('popup-show-once')) document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
+  if (document.getElementById('popup-title')) document.getElementById('popup-title').value = savedSettings.popupTitle || '';
+  if (document.getElementById('popup-text')) document.getElementById('popup-text').value = savedSettings.popupText || '';
+  if (document.getElementById('popup-link')) document.getElementById('popup-link').value = savedSettings.popupLink || '';
 
-  document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
-  document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
-  document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
+  if (document.getElementById('banner-enabled')) document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
+  if (document.getElementById('banner-interval')) document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
+  if (document.getElementById('banner-title')) document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
 
   if (savedSettings.logo) {
     currentLogo = savedSettings.logo;
     document.getElementById('logo-image').src = currentLogo;
     document.getElementById('logo-image').classList.remove('hidden');
     document.getElementById('logo-placeholder').classList.add('hidden');
-  } else {
-    document.getElementById('logo-image').classList.add('hidden');
-    document.getElementById('logo-placeholder').classList.remove('hidden');
   }
 
   if (savedSettings.heroImage) {
@@ -1979,9 +2018,6 @@ function loadSettings() {
     document.getElementById('hero-image-preview').src = currentHeroImage;
     document.getElementById('hero-image-preview').classList.remove('hidden');
     document.getElementById('hero-image-placeholder').classList.add('hidden');
-  } else {
-    document.getElementById('hero-image-preview').classList.add('hidden');
-    document.getElementById('hero-image-placeholder').classList.remove('hidden');
   }
 
   if (savedSettings.popupImage) {
@@ -1989,9 +2025,6 @@ function loadSettings() {
     document.getElementById('popup-image-preview').src = currentPopupImage;
     document.getElementById('popup-image-preview').classList.remove('hidden');
     document.getElementById('popup-image-placeholder').classList.add('hidden');
-  } else {
-    document.getElementById('popup-image-preview').classList.add('hidden');
-    document.getElementById('popup-image-placeholder').classList.remove('hidden');
   }
 
   bannerImages = Array.isArray(savedSettings.bannerImages) ? savedSettings.bannerImages : [];
@@ -2078,3 +2111,4 @@ window.onclick = function(event) {
 
 </body>
 </html>
+
