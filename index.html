@@ -1089,18 +1089,11 @@ async function uploadImageToDrive(base64Image, fileName) {
   try {
     showSyncIndicator('Şəkil yüklənir...', 'loading');
 
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'uploadImage',
-        image: base64Image,
-        fileName: fileName || `image_${Date.now()}.jpg`,
-        folderId: CONFIG.DRIVE_FOLDER_ID
-      })
+    const result = await postAppsScript('uploadImage', {
+      image: base64Image,
+      fileName: fileName || `image_${Date.now()}.jpg`,
+      folderId: CONFIG.DRIVE_FOLDER_ID
     });
-
-    const result = await response.json();
 
     if (result.success) {
       showSyncIndicator('Şəkil yükləndi!', 'success');
@@ -1115,6 +1108,64 @@ async function uploadImageToDrive(base64Image, fileName) {
     setTimeout(hideSyncIndicator, 2200);
     return null;
   }
+}
+
+async function parseAppsScriptResponse(response) {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(raw || `HTTP ${response.status}`);
+  }
+}
+
+async function postAppsScript(action, payload = {}) {
+  const jsonPayload = { action, ...payload };
+  const formPayload = new URLSearchParams({
+    action,
+    ...Object.fromEntries(Object.entries(payload).map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]))
+  });
+
+  const attempts = [
+    {
+      url: CONFIG.GAS_URL,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonPayload)
+      }
+    },
+    {
+      url: `${CONFIG.GAS_URL}?action=${encodeURIComponent(action)}`,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    },
+    {
+      url: CONFIG.GAS_URL,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: formPayload.toString()
+      }
+    }
+  ];
+
+  let lastError = null;
+  for (const attempt of attempts) {
+    try {
+      const response = await fetch(attempt.url, attempt.init);
+      const result = await parseAppsScriptResponse(response);
+      if (result?.success) return result;
+      lastError = new Error(result?.error || 'Unknown Apps Script error');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Apps Script request failed');
 }
 
 function buildSyncPayload() {
@@ -1144,16 +1195,7 @@ async function syncToGoogleSheets(showToast = true) {
 
     const payload = buildSyncPayload();
 
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'syncData',
-        data: payload
-      })
-    });
-
-    const result = await response.json();
+    const result = await postAppsScript('syncData', { data: payload });
 
     if (!result.success) {
       throw new Error(result.error || 'Sync error');
