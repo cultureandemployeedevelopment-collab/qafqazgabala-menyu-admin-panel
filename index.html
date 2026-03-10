@@ -706,12 +706,13 @@
           <label class="block text-sm font-medium text-gray-700">Yemək Videosu</label>
         </div>
         <div class="flex gap-2 mb-3">
-          <input type="text" id="prod-video-url" placeholder="Video URL (YouTube, Vimeo və ya birbaşa link)" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm" onchange="updateVideoPreview()">
+          <input type="file" id="prod-video-file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white" onchange="handleVideoFileInput(this)">
+          <input type="hidden" id="prod-video-url">
           <button type="button" onclick="clearVideo()" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
             <i class="fas fa-trash"></i>
           </button>
         </div>
-        <p class="text-xs text-gray-500 mb-2">Dəstəklənən formatlar: MP4, WebM, YouTube, Vimeo</p>
+        <p class="text-xs text-gray-500 mb-2">Video fayl yükləyin (MP4, WebM, MOV). Link əlavə etmək tələb olunmur.</p>
         <div id="video-preview-container" class="hidden">
           <div class="video-preview-container">
             <video id="video-preview-player" controls poster="">
@@ -1110,6 +1111,31 @@ async function uploadImageToDrive(base64Image, fileName) {
   }
 }
 
+async function uploadVideoToDrive(base64Video, fileName) {
+  try {
+    showSyncIndicator('Video yüklənir...', 'loading');
+
+    const result = await postAppsScript('uploadVideo', {
+      video: base64Video,
+      fileName: fileName || `video_${Date.now()}.mp4`,
+      folderId: CONFIG.DRIVE_FOLDER_ID
+    });
+
+    if (result.success) {
+      showSyncIndicator('Video yükləndi!', 'success');
+      setTimeout(hideSyncIndicator, 1200);
+      return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
+    }
+
+    throw new Error(result.error || 'Video upload error');
+  } catch (error) {
+    console.error('Video upload error:', error);
+    showSyncIndicator('Video yüklənmədi!', 'error');
+    setTimeout(hideSyncIndicator, 2200);
+    return null;
+  }
+}
+
 async function parseAppsScriptResponse(response) {
   const raw = await response.text();
   try {
@@ -1177,11 +1203,35 @@ function buildSyncPayload() {
 
   if (!Array.isArray(cleanSettings.bannerImages)) {
     cleanSettings.bannerImages = [];
+  } else {
+    cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
+      const normalized = { ...(item || {}) };
+      if (typeof normalized.image === 'string' && normalized.image.startsWith('data:')) {
+        normalized.image = '';
+      }
+      return normalized;
+    });
   }
+
+  const cleanProducts = products.map(product => {
+    const normalized = { ...(product || {}) };
+
+    if (Array.isArray(normalized.images)) {
+      normalized.images = normalized.images.filter(img => !(typeof img === 'string' && img.startsWith('data:')));
+    } else {
+      normalized.images = [];
+    }
+
+    if (typeof normalized.videoUrl === 'string' && normalized.videoUrl.startsWith('data:')) {
+      normalized.videoUrl = '';
+    }
+
+    return normalized;
+  });
 
   return {
     categories,
-    products,
+    products: cleanProducts,
     orders,
     tables,
     reservations,
@@ -1194,11 +1244,55 @@ async function syncToGoogleSheets(showToast = true) {
     if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
     const payload = buildSyncPayload();
+    const syncAttempts = [
+      { action: 'syncData', body: { data: payload } },
+      { action: 'syncData', body: payload },
+      { action: 'saveMenu', body: { data: payload } },
+      { action: 'saveMenu', body: payload },
+      { action: 'updateMenu', body: { data: payload } },
+      { action: 'updateMenu', body: payload }
+    ];
 
-    const result = await postAppsScript('syncData', { data: payload });
+    let syncResult = null;
+    let lastError = null;
 
-    if (!result.success) {
-      throw new Error(result.error || 'Sync error');
+    for (const attempt of syncAttempts) {
+      try {
+        const result = await postAppsScript(attempt.action, attempt.body);
+        if (result?.success) {
+          syncResult = result;
+          break;
+        }
+        lastError = new Error(result?.error || 'Sync error');
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!syncResult) {
+      // Last-resort fire-and-forget request for strict CORS environments
+      try {
+        const fallbackBody = new URLSearchParams({
+          action: 'syncData',
+          data: JSON.stringify(payload)
+        }).toString();
+
+        await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: fallbackBody,
+          keepalive: true
+        });
+
+        syncResult = { success: true, fallback: true };
+      } catch (fallbackError) {
+        lastError = fallbackError;
+      }
+    }
+
+    if (!syncResult) {
+      throw lastError || new Error('Sync error');
     }
 
     if (showToast) {
@@ -1460,32 +1554,58 @@ function updateCategoryFilter() {
 }
 
 // VIDEO FUNCTIONS
+async function handleVideoFileInput(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('video/')) {
+    alert('Zəhmət olmasa video faylı seçin');
+    input.value = '';
+    return;
+  }
+
+  const maxSize = 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    alert('Video ölçüsü 50MB-dan çox ola bilməz');
+    input.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    const base64Video = ev.target.result;
+    const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
+    if (!uploadedUrl) {
+      alert('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.');
+      clearVideo();
+      return;
+    }
+    document.getElementById('prod-video-url').value = uploadedUrl;
+    currentProductVideo = uploadedUrl;
+    updateVideoPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
 function updateVideoPreview() {
   const videoUrl = document.getElementById('prod-video-url').value.trim();
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
-  
+
   if (!videoUrl) {
     previewContainer.classList.add('hidden');
     return;
   }
-  
-  // Check if it's a YouTube URL
-  const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
-  if (youtubeMatch) {
-    // For YouTube, we'll show a placeholder since we can't embed directly easily
-    videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-    previewContainer.classList.remove('hidden');
-    return;
-  }
-  
-  // For direct video URLs
+
   videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  videoPlayer.load();
   previewContainer.classList.remove('hidden');
 }
 
 function clearVideo() {
   document.getElementById('prod-video-url').value = '';
+  const fileInput = document.getElementById('prod-video-file');
+  if (fileInput) fileInput.value = '';
   document.getElementById('video-preview-container').classList.add('hidden');
   currentProductVideo = '';
 }
@@ -1523,6 +1643,7 @@ function openProductModal(productId = null) {
   document.getElementById('prod-time').value = '3min';
   document.getElementById('prod-vat').value = '';
   document.getElementById('prod-video-url').value = '';
+  document.getElementById('prod-video-file').value = '';
   document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
