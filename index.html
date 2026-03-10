@@ -1008,6 +1008,32 @@ function parsePossibleJson(value, fallback) {
   }
 }
 
+
+function normalizeProduct(product = {}) {
+  const normalized = { ...(product || {}) };
+
+  if (!Array.isArray(normalized.images)) {
+    if (typeof normalized.imagesJson === 'string') {
+      normalized.images = parsePossibleJson(normalized.imagesJson, []);
+    } else if (Array.isArray(normalized.imagesJson)) {
+      normalized.images = normalized.imagesJson;
+    } else if (typeof normalized.imageUrl === 'string' && normalized.imageUrl.trim()) {
+      normalized.images = [normalized.imageUrl.trim()];
+    } else {
+      normalized.images = [];
+    }
+  }
+
+  normalized.images = normalized.images.filter(img => typeof img === 'string' && img.trim());
+  normalized.imagesJson = JSON.stringify(normalized.images);
+  normalized.imageUrl = normalized.imageUrl || normalized.images[0] || '';
+
+  if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
+  if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
+
+  return normalized;
+}
+
 function normalizeServerPayload(data) {
   const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
 
@@ -1022,7 +1048,7 @@ function normalizeServerPayload(data) {
 
   return {
     categories: Array.isArray(src.categories) ? src.categories : [],
-    products: Array.isArray(src.products) ? src.products : [],
+    products: Array.isArray(src.products) ? src.products.map(normalizeProduct) : [],
     orders: Array.isArray(src.orders) ? src.orders : [],
     tables: Array.isArray(src.tables) ? src.tables : [],
     reservations: Array.isArray(src.reservations) ? src.reservations : [],
@@ -1164,7 +1190,7 @@ function buildSyncPayload() {
   }
 
   const cleanProducts = products.map(product => {
-    const normalized = { ...(product || {}) };
+    const normalized = normalizeProduct(product);
 
     if (Array.isArray(normalized.images)) {
       normalized.images = normalized.images.filter(img => !(typeof img === 'string' && img.startsWith('data:')));
@@ -1176,8 +1202,21 @@ function buildSyncPayload() {
       normalized.videoUrl = '';
     }
 
+    normalized.imagesJson = JSON.stringify(normalized.images);
+    normalized.imageUrl = normalized.images[0] || '';
+
     return normalized;
   });
+
+  const cleanBannerImages = Array.isArray(cleanSettings.bannerImages)
+    ? cleanSettings.bannerImages.filter(item => item && item.image).map(item => item.image)
+    : [];
+
+  cleanSettings.logoUrl = cleanSettings.logo || '';
+  cleanSettings.headerImage = cleanSettings.heroImage || '';
+  cleanSettings.adImage = cleanSettings.popupImage || '';
+  cleanSettings.bannerImagesJson = JSON.stringify(cleanBannerImages);
+  cleanSettings.bannerImageUrls = cleanBannerImages.join(',');
 
   return {
     categories,
@@ -1777,17 +1816,27 @@ function viewImage(src) {
 
 async function saveProduct() {
   const nameAz = document.getElementById('prod-name-az').value.trim();
-  const nameEn = document.getElementById('prod-name-en').value.trim();
+  let nameEn = document.getElementById('prod-name-en').value.trim();
   const descAz = document.getElementById('prod-desc-az').value.trim();
-  const descEn = document.getElementById('prod-desc-en').value.trim();
+  let descEn = document.getElementById('prod-desc-en').value.trim();
   const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
   const videoUrl = document.getElementById('prod-video-url').value.trim();
 
-  if (!nameAz || !nameEn || !categoryId || !price) {
+  if (!nameAz || !categoryId || !price) {
     alert('Vacib xanaları doldurun');
     return;
+  }
+
+  if (!nameEn) {
+    nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz;
+    document.getElementById('prod-name-en').value = nameEn;
+  }
+
+  if (!descEn && descAz) {
+    descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz;
+    document.getElementById('prod-desc-en').value = descEn;
   }
 
   const progressDiv = document.getElementById('upload-progress');
@@ -1828,6 +1877,8 @@ async function saveProduct() {
     categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
     price,
     images: uploadedImages,
+    imagesJson: JSON.stringify(uploadedImages),
+    imageUrl: uploadedImages[0] || '',
     videoUrl: videoUrl || '',
     specs: {
       volume: document.getElementById('prod-volume').value.trim(),
@@ -2334,18 +2385,23 @@ function autoSaveSettings(triggerSync = true) {
     heroTitleAz: document.getElementById('hero-title-az')?.value || '',
     heroTitleEn: document.getElementById('hero-title-en')?.value || '',
     heroImage: currentHeroImage || '',
+    headerImage: currentHeroImage || '',
     recommendedIds: JSON.stringify(recommendedIds),
     logo: currentLogo || '',
+    logoUrl: currentLogo || '',
     popupEnabled: !!document.getElementById('popup-enabled')?.checked,
     popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
     popupTitle: document.getElementById('popup-title')?.value || '',
     popupText: document.getElementById('popup-text')?.value || '',
     popupLink: document.getElementById('popup-link')?.value || '',
     popupImage: currentPopupImage || '',
+    adImage: currentPopupImage || '',
     bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
     bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
     bannerTitle: document.getElementById('banner-title')?.value || '',
-    bannerImages: bannerImages
+    bannerImages: bannerImages,
+    bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
+    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(',')
   };
 
   saveLocalState();
@@ -2455,6 +2511,7 @@ function initCharts() {
 }
 
 function initApp() {
+  products = (products || []).map(normalizeProduct);
   updateStats();
   renderCategories();
   renderProducts();
