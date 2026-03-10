@@ -1203,6 +1203,8 @@ function buildSyncPayload() {
 
   if (!Array.isArray(cleanSettings.bannerImages)) {
     cleanSettings.bannerImages = [];
+
+ main
   } else {
     cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
       const normalized = { ...(item || {}) };
@@ -1232,6 +1234,15 @@ function buildSyncPayload() {
   return {
     categories,
     products: cleanProducts,
+
+
+  }
+
+  return {
+    categories,
+    products,
+ main
+main
     orders,
     tables,
     reservations,
@@ -1270,6 +1281,8 @@ async function syncToGoogleSheets(showToast = true) {
     }
 
     if (!syncResult) {
+
+ main
       // Last-resort fire-and-forget request for strict CORS environments
       try {
         const fallbackBody = new URLSearchParams({
@@ -1292,6 +1305,11 @@ async function syncToGoogleSheets(showToast = true) {
     }
 
     if (!syncResult) {
+
+
+
+ main
+ main
       throw lastError || new Error('Sync error');
     }
 
@@ -1360,6 +1378,7 @@ function togglePassword() {
 
 async function handleLogin(e) {
   e.preventDefault();
+
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value;
 
@@ -1380,6 +1399,18 @@ async function handleLogin(e) {
     initApp();
   } catch (error) {
     console.error('Login bootstrap error:', error);
+
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+
+  if (username === 'admin' && password === 'admin123') {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    await loadInitialDataFromServer();
+    initApp();
+  } else {
+    document.getElementById('login-error').classList.remove('hidden');
+ main
   }
 }
 
@@ -1585,6 +1616,10 @@ async function handleVideoFileInput(input) {
   reader.onload = async function(ev) {
     const base64Video = ev.target.result;
     const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
+
+
+ codex/duzlt-sinxronizasiya-problemini-14ahxo
+ main
     if (!uploadedUrl) {
       alert('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.');
       clearVideo();
@@ -1592,6 +1627,14 @@ async function handleVideoFileInput(input) {
     }
     document.getElementById('prod-video-url').value = uploadedUrl;
     currentProductVideo = uploadedUrl;
+
+
+
+    const finalUrl = uploadedUrl || base64Video;
+    document.getElementById('prod-video-url').value = finalUrl;
+    currentProductVideo = finalUrl;
+ main
+ main
     updateVideoPreview();
   };
   reader.readAsDataURL(file);
