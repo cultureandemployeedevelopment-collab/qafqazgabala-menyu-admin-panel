@@ -1203,6 +1203,7 @@ function buildSyncPayload() {
 
   if (!Array.isArray(cleanSettings.bannerImages)) {
     cleanSettings.bannerImages = [];
+ codex/duzlt-sinxronizasiya-problemini-14ahxo
   } else {
     cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
       const normalized = { ...(item || {}) };
@@ -1232,6 +1233,13 @@ function buildSyncPayload() {
   return {
     categories,
     products: cleanProducts,
+=======
+  }
+
+  return {
+    categories,
+    products,
+ main
     orders,
     tables,
     reservations,
@@ -1270,6 +1278,7 @@ async function syncToGoogleSheets(showToast = true) {
     }
 
     if (!syncResult) {
+ codex/duzlt-sinxronizasiya-problemini-14ahxo
       // Last-resort fire-and-forget request for strict CORS environments
       try {
         const fallbackBody = new URLSearchParams({
@@ -1292,6 +1301,8 @@ async function syncToGoogleSheets(showToast = true) {
     }
 
     if (!syncResult) {
+
+ main
       throw lastError || new Error('Sync error');
     }
 
@@ -1575,6 +1586,7 @@ async function handleVideoFileInput(input) {
   reader.onload = async function(ev) {
     const base64Video = ev.target.result;
     const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
+ codex/duzlt-sinxronizasiya-problemini-14ahxo
     if (!uploadedUrl) {
       alert('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.');
       clearVideo();
@@ -1582,6 +1594,11 @@ async function handleVideoFileInput(input) {
     }
     document.getElementById('prod-video-url').value = uploadedUrl;
     currentProductVideo = uploadedUrl;
+
+    const finalUrl = uploadedUrl || base64Video;
+    document.getElementById('prod-video-url').value = finalUrl;
+    currentProductVideo = finalUrl;
+ main
     updateVideoPreview();
   };
   reader.readAsDataURL(file);
