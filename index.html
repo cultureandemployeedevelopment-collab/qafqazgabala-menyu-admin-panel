@@ -2,157 +2,103 @@
 <html lang="az">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>QR Menyu Admin Panel</title>
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
   <style>
-    body { font-family: 'Inter', sans-serif; background:#f5f5f0; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: #f5f5f0; touch-action: manipulation; }
     .sidebar-gradient { background: linear-gradient(180deg, #0a1f0a 0%, #051005 100%); }
-    .nav-item { transition: .2s; cursor:pointer; }
+    .nav-item { transition: .2s; cursor: pointer; }
     .nav-item:hover { background: rgba(255,255,255,.05); }
     .nav-item.active { background: rgba(255,255,255,.1); border-left: 3px solid #f59e0b; }
-    .card-hover { transition:.2s; }
+    .card-hover { transition: .2s; }
     .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,.1); }
-    .status-badge { font-size:.75rem; padding:.25rem .75rem; border-radius:9999px; font-weight:500; }
-    .chart-container { position:relative; height:300px; }
-    .custom-scrollbar::-webkit-scrollbar { width:6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background:#f1f1f1; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+    .status-badge { font-size: .75rem; padding: .25rem .75rem; border-radius: 9999px; font-weight: 500; }
+    .chart-container { position: relative; height: 300px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     .fade-in { animation: fadeIn .25s ease-in; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0);} }
-    .notification-dot { animation:pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-    .login-bg { background: linear-gradient(135deg, #0a1f0a 0%, #1a3a1a 100%); }
-    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; align-items:center; justify-content:center; }
-    .modal.active { display:flex; }
-    .modal-content { background:#fff; border-radius:16px; max-width:980px; width:92%; max-height:90vh; overflow-y:auto; }
-    .drag-area { border:2px dashed #d1d5db; border-radius:12px; padding:2rem; text-align:center; background:#fafafa; transition:.2s; }
-    .drag-area.dragover { border-color:#059669; background:#ecfdf5; }
-    .image-gallery { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:12px; }
-    .image-item { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; border:2px solid #e5e7eb; cursor:pointer; transition:.2s; }
-    .image-item:hover { transform:scale(1.03); border-color:#059669; }
-    .image-item img { width:100%; height:100%; object-fit:cover; }
-    .remove-btn {
-      position:absolute; top:4px; right:4px; width:24px; height:24px;
-      background:rgba(239,68,68,.95); color:#fff; border-radius:999px;
-      display:flex; align-items:center; justify-content:center; font-size:12px;
-      opacity:0; transition:.2s;
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; align-items: center; justify-content: center; padding: 16px; }
+    .modal.active { display: flex; }
+    .modal-content { background: #fff; border-radius: 16px; max-width: 980px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    
+    @media (max-width: 640px) {
+      .modal-content { max-width: 100%; max-height: 95vh; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; left: 0; right: 0; }
+      .modal.active { align-items: flex-end; padding: 0; }
     }
-    .image-item:hover .remove-btn { opacity:1; }
-    .sync-indicator {
-      position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:999px;
-      color:#fff; font-weight:500; z-index:100; display:flex; align-items:center; gap:8px;
-      box-shadow:0 4px 12px rgba(0,0,0,.15);
-    }
-    .sync-loading { background:#3b82f6; }
-    .sync-success { background:#10b981; }
-    .sync-error { background:#ef4444; }
-    .availability-toggle { position:relative; display:inline-flex; align-items:center; cursor:pointer; }
-    .availability-toggle input { display:none; }
-    .toggle-slider { width:50px; height:26px; background:#ef4444; border-radius:26px; position:relative; transition:.3s; }
-    .toggle-slider:before {
-      content:''; position:absolute; width:22px; height:22px; background:#fff; border-radius:50%;
-      top:2px; left:2px; transition:.3s;
-    }
-    .availability-toggle input:checked + .toggle-slider { background:#10b981; }
+    
+    .drag-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem; text-align: center; background: #fafafa; transition: .2s; }
+    .drag-area.dragover { border-color: #059669; background: #ecfdf5; }
+    .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+    .image-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; cursor: pointer; transition: .2s; }
+    .image-item:hover { transform: scale(1.03); border-color: #059669; }
+    .image-item img { width: 100%; height: 100%; object-fit: cover; }
+    .remove-btn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(239,68,68,.95); color: #fff; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0; transition: .2s; }
+    .image-item:hover .remove-btn { opacity: 1; }
+    
+    .availability-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+    .availability-toggle input { display: none; }
+    .toggle-slider { width: 50px; height: 26px; background: #ef4444; border-radius: 26px; position: relative; transition: .3s; }
+    .toggle-slider:before { content: ''; position: absolute; width: 22px; height: 22px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: .3s; }
+    .availability-toggle input:checked + .toggle-slider { background: #10b981; }
     .availability-toggle input:checked + .toggle-slider:before { transform: translateX(24px); }
-    .toggle-label { margin-left:10px; font-weight:600; font-size:14px; }
-    .progress-bar { width:100%; height:4px; background:#e5e7eb; border-radius:2px; overflow:hidden; margin-top:8px; }
-    .progress-bar-fill { height:100%; background:#10b981; transition:width .3s; }
-    .logo-preview {
-      width:150px; height:150px; border:2px dashed #d1d5db; border-radius:12px;
-      display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fafafa;
-    }
-    .logo-preview img { width:100%; height:100%; object-fit:contain; }
-    .specs-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
-    .banner-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
-    .banner-card { border:1px solid #e5e7eb; border-radius:14px; overflow:hidden; background:#fff; }
-    .banner-thumb { width:100%; height:120px; object-fit:cover; background:#f3f4f6; }
-    .switch-wrap { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; border-radius:14px; }
+    .toggle-label { margin-left: 10px; font-weight: 600; font-size: 14px; }
     
-    /* Video preview styles */
-    .video-preview-container {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-      margin-top: 10px;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-    }
-    .video-preview-container video {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .video-preview-container .remove-video-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(239,68,68,0.9);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .video-preview-container:hover .remove-video-btn {
-      opacity: 1;
-    }
-    .video-thumbnail {
-      position: relative;
-      cursor: pointer;
-    }
-    .video-thumbnail .play-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .video-thumbnail:hover .play-overlay {
-      opacity: 1;
-    }
-    .video-thumbnail .play-icon {
-      width: 50px;
-      height: 50px;
-      background: rgba(255,255,255,0.9);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #059669;
-      font-size: 20px;
+    .progress-bar { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+    .progress-bar-fill { height: 100%; background: #10b981; transition: width .3s; }
+    
+    .logo-preview { width: 150px; height: 150px; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; }
+    .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+    
+    .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .banner-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+    .banner-card { border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; background: #fff; }
+    .banner-thumb { width: 100%; height: 120px; object-fit: cover; background: #f3f4f6; }
+    .switch-wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-radius: 14px; }
+    
+    .video-preview-container { position: relative; width: 100%; max-width: 400px; margin-top: 10px; border-radius: 12px; overflow: hidden; background: #000; }
+    .video-preview-container video { width: 100%; height: auto; display: block; }
+    .video-preview-container .remove-video-btn { position: absolute; top: 8px; right: 8px; background: rgba(239,68,68,0.9); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; opacity: 0; transition: opacity 0.2s; }
+    .video-preview-container:hover .remove-video-btn { opacity: 1; }
+    
+    .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 16px; z-index: 40; }
+    .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; font-size: 11px; color: #6b7280; }
+    .mobile-nav-item.active { color: #059669; }
+    
+    @media (max-width: 1024px) {
+      .sidebar-gradient { display: none; }
+      .mobile-nav { display: flex; justify-content: space-around; }
+      main { padding-bottom: 80px !important; }
     }
     
-    @media (max-width:768px) { .specs-grid { grid-template-columns:1fr; } }
+    @media (max-width: 768px) {
+      .specs-grid { grid-template-columns: 1fr; }
+      .banner-list { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    .login-bg { background: linear-gradient(135deg, #0a1f0a 0%, #1a3a1a 100%); min-height: 100vh; }
+    
+    .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1f2937; color: white; padding: 12px 24px; border-radius: 9999px; font-size: 14px; opacity: 0; transition: all 0.3s; z-index: 100; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #059669; }
+    .toast.error { background: #dc2626; }
   </style>
 </head>
 <body class="text-gray-800 antialiased">
 
-<div id="sync-indicator" class="sync-indicator hidden">
-  <i class="fas fa-circle-notch fa-spin"></i>
-  <span id="sync-text">Sinxronizasiya...</span>
-</div>
+<div id="toast" class="toast"></div>
 
-<div id="login-screen" class="fixed inset-0 login-bg z-50 flex items-center justify-center">
-  <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl w-full max-w-md mx-4 border border-white/20">
+<!-- Login Screen -->
+<div id="login-screen" class="fixed inset-0 login-bg z-50 flex items-center justify-center p-4">
+  <div class="bg-white/10 backdrop-blur-lg p-6 sm:p-8 rounded-2xl w-full max-w-md border border-white/20">
     <div class="text-center mb-8">
       <div class="w-16 h-16 bg-amber-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
         <i class="fas fa-utensils text-white text-2xl"></i>
@@ -160,16 +106,15 @@
       <h1 class="text-2xl font-bold text-white mb-2">QR Menyu Admin</h1>
       <p class="text-gray-300 text-sm">Zəhmət olmasa daxil olun</p>
     </div>
-
     <form class="space-y-4" onsubmit="handleLogin(event)">
       <div>
         <label class="block text-sm font-medium text-gray-300 mb-2">İstifadəçi adı</label>
-        <input type="text" id="username" value="admin" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white">
+        <input type="text" id="username" value="admin" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-amber-500">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-300 mb-2">Şifrə</label>
         <div class="relative">
-          <input type="password" id="password" value="admin123" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white">
+          <input type="password" id="password" value="admin123" class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-amber-500">
           <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
             <i class="fas fa-eye" id="eye-icon"></i>
           </button>
@@ -179,14 +124,15 @@
         Daxil ol
       </button>
     </form>
-
     <p id="login-error" class="text-red-400 text-sm text-center mt-4 hidden">Yanlış istifadəçi adı və ya şifrə!</p>
   </div>
 </div>
 
-<div id="main-app" class="hidden h-screen overflow-hidden">
+<!-- Main App -->
+<div id="main-app" class="hidden min-h-screen">
   <div class="flex h-full">
-    <aside class="sidebar-gradient w-64 flex-shrink-0 flex flex-col text-white">
+    <!-- Sidebar Desktop -->
+    <aside class="sidebar-gradient w-64 flex-shrink-0 flex flex-col text-white fixed h-full hidden lg:flex">
       <div class="p-6 flex items-center gap-3 border-b border-white/10">
         <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
           <i class="fas fa-utensils text-white text-lg"></i>
@@ -196,31 +142,27 @@
           <p class="text-xs text-gray-400">Admin Paneli</p>
         </div>
       </div>
-
       <nav class="flex-1 overflow-y-auto custom-scrollbar py-4">
         <div class="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Əsas Menyu</div>
-
         <div onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm font-medium text-white">
           <i class="fas fa-th-large w-5"></i> Dashboard
         </div>
-
         <div onclick="showPage('categories')" id="nav-categories" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
           <i class="fas fa-list w-5"></i> Kateqoriyalar
         </div>
-
         <div onclick="showPage('products')" id="nav-products" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
           <i class="fas fa-utensils w-5"></i> Menyu Məhsulları
         </div>
-
         <div onclick="showPage('tables')" id="nav-tables" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
           <i class="fas fa-chair w-5"></i> Masalar
         </div>
-
+        <div onclick="showPage('reservations')" id="nav-reservations" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+          <i class="fas fa-calendar-check w-5"></i> Rezervasiyalar
+        </div>
         <div onclick="showPage('settings')" id="nav-settings" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
           <i class="fas fa-cog w-5"></i> Parametrlər
         </div>
       </nav>
-
       <div class="p-4 border-t border-white/10">
         <div class="flex items-center gap-3 mb-4 px-2">
           <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">A</div>
@@ -235,46 +177,41 @@
       </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto bg-[#f5f5f0]">
-      <header class="bg-white/70 backdrop-blur-sm sticky top-0 z-20 px-8 py-4 flex items-center justify-between border-b border-gray-200/50">
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-64 bg-[#f5f5f0] min-h-screen">
+      <header class="bg-white/70 backdrop-blur-sm sticky top-0 z-20 px-4 sm:px-8 py-4 flex items-center justify-between border-b border-gray-200/50">
         <div>
           <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
           <p id="page-subtitle" class="text-sm text-gray-500">Restoranınızın ümumi vəziyyəti</p>
         </div>
-        <div class="flex items-center gap-4">
-          <button onclick="manualSync()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
-            <i class="fas fa-sync-alt"></i> Sinxronizasiya
-          </button>
-          <div id="sync-status-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2">
-            <i class="fas fa-check-circle"></i>
-            <span>Sinxronizasiya edildi</span>
-          </div>
-        </div>
+        <button onclick="manualSync()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
+          <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Sinxronizasiya</span>
+        </button>
       </header>
 
-      <div class="p-8">
+      <div class="p-4 sm:p-8">
         <!-- DASHBOARD -->
         <div id="page-dashboard" class="page-content fade-in">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-green-500">
-              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-orders">0</div>
-              <div class="text-sm text-gray-500">Sifarişlər</div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm card-hover border-l-4 border-green-500">
+              <div class="text-2xl sm:text-3xl font-bold text-gray-800 mb-1" id="stat-orders">0</div>
+              <div class="text-xs sm:text-sm text-gray-500">Sifarişlər</div>
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-amber-500">
-              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-revenue">0₼</div>
-              <div class="text-sm text-gray-500">Gəlir</div>
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm card-hover border-l-4 border-amber-500">
+              <div class="text-2xl sm:text-3xl font-bold text-gray-800 mb-1" id="stat-revenue">0₼</div>
+              <div class="text-xs sm:text-sm text-gray-500">Gəlir</div>
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-teal-500">
-              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-products">0</div>
-              <div class="text-sm text-gray-500">Məhsullar</div>
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm card-hover border-l-4 border-teal-500">
+              <div class="text-2xl sm:text-3xl font-bold text-gray-800 mb-1" id="stat-products">0</div>
+              <div class="text-xs sm:text-sm text-gray-500">Məhsullar</div>
               <div class="text-xs text-gray-400 mt-1"><span id="stat-categories">0</span> kateqoriya</div>
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm card-hover border-l-4 border-red-500">
-              <div class="text-3xl font-bold text-gray-800 mb-1" id="stat-tables">0</div>
-              <div class="text-sm text-gray-500">Masalar</div>
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm card-hover border-l-4 border-red-500">
+              <div class="text-2xl sm:text-3xl font-bold text-gray-800 mb-1" id="stat-tables">0</div>
+              <div class="text-xs sm:text-sm text-gray-500">Masalar</div>
             </div>
           </div>
-
+          
           <div class="bg-white rounded-2xl p-6 shadow-sm">
             <h3 class="font-bold text-gray-800 text-lg mb-4">Həftəlik Görünüş</h3>
             <div class="chart-container">
@@ -287,77 +224,103 @@
         <div id="page-categories" class="page-content hidden fade-in">
           <div class="flex justify-between items-center mb-6">
             <div>
-              <h3 class="text-2xl font-bold text-gray-800">Kateqoriyalar</h3>
+              <h3 class="text-xl sm:text-2xl font-bold text-gray-800">Kateqoriyalar</h3>
               <p class="text-sm text-gray-500 mt-1"><span id="category-count">0</span> kateqoriya</p>
             </div>
             <button onclick="openCategoryModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-              <i class="fas fa-plus"></i> Yeni Kateqoriya
+              <i class="fas fa-plus"></i> <span class="hidden sm:inline">Yeni Kateqoriya</span>
             </button>
           </div>
-
+          
           <div class="mb-6">
             <div class="relative">
               <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-              <input type="text" id="category-search" onkeyup="filterCategories()" placeholder="Kateqoriya axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200">
+              <input type="text" id="category-search" onkeyup="filterCategories()" placeholder="Kateqoriya axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green-500">
             </div>
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="categories-grid"></div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" id="categories-grid"></div>
         </div>
 
         <!-- PRODUCTS -->
         <div id="page-products" class="page-content hidden fade-in">
           <div class="flex justify-between items-center mb-6">
             <div>
-              <h3 class="text-2xl font-bold text-gray-800">Menyu Məhsulları</h3>
+              <h3 class="text-xl sm:text-2xl font-bold text-gray-800">Menyu Məhsulları</h3>
               <p class="text-sm text-gray-500 mt-1"><span id="product-count-header">0</span> məhsul</p>
             </div>
             <button onclick="openProductModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-              <i class="fas fa-plus"></i> Yeni Məhsul
+              <i class="fas fa-plus"></i> <span class="hidden sm:inline">Yeni Məhsul</span>
             </button>
           </div>
-
-          <div class="flex gap-4 mb-6">
+          
+          <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="relative flex-1">
               <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-              <input type="text" id="product-search" onkeyup="filterProducts()" placeholder="Məhsul axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200">
+              <input type="text" id="product-search" onkeyup="filterProducts()" placeholder="Məhsul axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green-500">
             </div>
-
-            <select id="category-filter" onchange="filterProducts()" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600">
+            <select id="category-filter" onchange="filterProducts()" class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-green-500">
               <option value="">Bütün kateqoriyalar</option>
             </select>
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="products-grid"></div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" id="products-grid"></div>
         </div>
 
         <!-- TABLES -->
         <div id="page-tables" class="page-content hidden fade-in">
           <div class="flex justify-between items-center mb-6">
             <div>
-              <h3 class="text-2xl font-bold text-gray-800">Masalar və QR Kodlar</h3>
+              <h3 class="text-xl sm:text-2xl font-bold text-gray-800">Masalar və QR Kodlar</h3>
               <p class="text-sm text-gray-500 mt-1"><span id="table-count">0</span> masa</p>
             </div>
             <button onclick="openTableModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-              <i class="fas fa-plus"></i> Yeni Masa
+              <i class="fas fa-plus"></i> <span class="hidden sm:inline">Yeni Masa</span>
             </button>
           </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" id="tables-grid"></div>
+        </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tables-grid"></div>
+        <!-- RESERVATIONS -->
+        <div id="page-reservations" class="page-content hidden fade-in">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-xl sm:text-2xl font-bold text-gray-800">Rezervasiyalar</h3>
+              <p class="text-sm text-gray-500 mt-1"><span id="reservation-count">0</span> rezervasiya</p>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-600 font-semibold">
+                  <tr>
+                    <th class="px-4 py-3">Müştəri</th>
+                    <th class="px-4 py-3">Telefon</th>
+                    <th class="px-4 py-3">Tarix/Saat</th>
+                    <th class="px-4 py-3">Qonaq</th>
+                    <th class="px-4 py-3">Masa</th>
+                    <th class="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reservations-list" class="divide-y divide-gray-100"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- SETTINGS -->
         <div id="page-settings" class="page-content hidden fade-in">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <!-- Logo -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-amber-100">
               <div class="flex items-center gap-2 mb-6">
                 <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                   <i class="fas fa-image text-amber-600"></i>
                 </div>
                 <h4 class="font-semibold text-gray-800">Restoran Logosu</h4>
               </div>
-
               <div class="flex flex-col items-center">
                 <div class="logo-preview mb-4">
                   <div class="text-center text-gray-400" id="logo-placeholder">
@@ -366,9 +329,7 @@
                   </div>
                   <img id="logo-image" class="hidden" src="" alt="Logo">
                 </div>
-
                 <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoUpload(this)">
-
                 <div class="flex gap-2">
                   <button onclick="document.getElementById('logo-input').click()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
                     <i class="fas fa-upload mr-2"></i>Logo Seç
@@ -380,25 +341,23 @@
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <!-- Hero Image -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
               <div class="flex items-center gap-2 mb-6">
                 <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
                   <i class="fas fa-image text-emerald-600"></i>
                 </div>
                 <h4 class="font-semibold text-gray-800">Hero Şəkli</h4>
               </div>
-
               <div class="space-y-4">
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Hero başlıq (AZ)</label>
-                  <input type="text" id="hero-title-az" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="hero-title-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
-
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Hero title (EN)</label>
-                  <input type="text" id="hero-title-en" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="hero-title-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
-
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Hero şəkli</label>
                   <div class="space-y-3">
@@ -409,9 +368,7 @@
                         <div>Hero image əlavə edin</div>
                       </div>
                     </div>
-
                     <input type="file" id="hero-image-input" class="hidden" accept="image/*" onchange="handleHeroImageUpload(this)">
-
                     <div class="flex gap-2">
                       <button type="button" onclick="document.getElementById('hero-image-input').click()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
                         <i class="fas fa-upload mr-2"></i>Şəkil Seç
@@ -425,60 +382,61 @@
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <!-- Restaurant Info -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
               <h4 class="font-semibold text-gray-800 mb-6">Restoran Məlumatları</h4>
               <div class="space-y-4">
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (AZ)</label>
-                  <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="rest-name-az" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Adı (EN)</label>
-                  <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="rest-name-en" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Telefon</label>
-                  <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="rest-phone" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Email</label>
-                  <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="email" id="rest-email" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (AZ)</label>
-                  <textarea id="rest-address-az" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
+                  <textarea id="rest-address-az" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()"></textarea>
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Ünvan (EN)</label>
-                  <textarea id="rest-address-en" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
+                  <textarea id="rest-address-en" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()"></textarea>
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Həftəiçi</label>
-                  <input type="text" id="rest-work-weekday" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="rest-work-weekday" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Həftəsonu</label>
-                  <input type="text" id="rest-work-weekend" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="rest-work-weekend" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <!-- Social & Translation -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
               <h4 class="font-semibold text-gray-800 mb-6">Sosial Media və Tərcümə</h4>
               <div class="space-y-4">
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Facebook</label>
-                  <input type="text" id="social-facebook" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="social-facebook" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Instagram</label>
-                  <input type="text" id="social-instagram" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="social-instagram" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">WhatsApp</label>
-                  <input type="text" id="social-whatsapp" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="social-whatsapp" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
-
                 <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
                   <div>
                     <p class="text-sm font-medium text-gray-800">AZ ⇄ EN Avtotərcümə</p>
@@ -489,7 +447,6 @@
                     <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                   </label>
                 </div>
-
                 <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
                   <div>
                     <p class="text-sm font-medium text-gray-800">Ağıllı Axtarış Badge</p>
@@ -503,15 +460,14 @@
               </div>
             </div>
 
-            <!-- POPUP REKLAM -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm lg:col-span-2">
+            <!-- Popup Ad -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm lg:col-span-2">
               <div class="flex items-center gap-2 mb-6">
                 <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
                   <i class="fas fa-bullhorn text-rose-600"></i>
                 </div>
                 <h4 class="font-semibold text-gray-800">Açılış Popup Reklamı</h4>
               </div>
-
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="space-y-4">
                   <div class="switch-wrap bg-rose-50">
@@ -524,7 +480,6 @@
                       <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-rose-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
-
                   <div class="switch-wrap bg-amber-50">
                     <div>
                       <p class="text-sm font-medium text-gray-800">Yalnız ilk açılışda göstər</p>
@@ -535,23 +490,19 @@
                       <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-amber-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
-
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-2">Popup başlıq</label>
-                    <input type="text" id="popup-title" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                    <input type="text" id="popup-title" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                   </div>
-
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-2">Popup mətni</label>
-                    <textarea id="popup-text" rows="4" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
+                    <textarea id="popup-text" rows="4" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()"></textarea>
                   </div>
-
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-2">Popup link</label>
-                    <input type="text" id="popup-link" placeholder="https://..." class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                    <input type="text" id="popup-link" placeholder="https://..." class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                   </div>
                 </div>
-
                 <div class="space-y-4">
                   <div class="w-full h-56 rounded-xl border border-dashed border-gray-300 overflow-hidden bg-gray-50 flex items-center justify-center">
                     <img id="popup-image-preview" src="" class="w-full h-full object-cover hidden">
@@ -560,9 +511,7 @@
                       <div>Popup şəkli əlavə edin</div>
                     </div>
                   </div>
-
                   <input type="file" id="popup-image-input" class="hidden" accept="image/*" onchange="handlePopupImageUpload(this)">
-
                   <div class="flex gap-2">
                     <button type="button" onclick="document.getElementById('popup-image-input').click()" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm">
                       <i class="fas fa-upload mr-2"></i>Şəkil Seç
@@ -575,8 +524,8 @@
               </div>
             </div>
 
-            <!-- BANNER SLIDER -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm lg:col-span-2">
+            <!-- Banner Slider -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm lg:col-span-2">
               <div class="flex items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center">
@@ -588,10 +537,8 @@
                   <i class="fas fa-plus mr-2"></i>Banner əlavə et
                 </button>
               </div>
-
               <input type="file" id="banner-images-input" class="hidden" accept="image/*" multiple onchange="handleBannerFiles(this.files)">
-
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div class="switch-wrap bg-sky-50">
                   <div>
                     <p class="text-sm font-medium text-gray-800">Slider aktiv olsun</p>
@@ -602,44 +549,62 @@
                     <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                   </label>
                 </div>
-
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Keçid intervalı (ms)</label>
-                  <input type="number" id="banner-interval" value="3000" min="1000" step="500" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="number" id="banner-interval" value="3000" min="1000" step="500" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
-
                 <div>
                   <label class="block text-xs font-medium text-gray-500 mb-2">Başlıq</label>
-                  <input type="text" id="banner-title" placeholder="Məs: Günün təklifləri" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+                  <input type="text" id="banner-title" placeholder="Məs: Günün təklifləri" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" onchange="autoSaveSettings()">
                 </div>
               </div>
-
               <div id="banner-list" class="banner-list"></div>
-
-              <div id="banner-empty" class="text-sm text-gray-500 bg-gray-50 rounded-xl p-4">
+              <div id="banner-empty" class="text-sm text-gray-500 bg-gray-50 rounded-xl p-4 text-center">
                 Hələ banner əlavə edilməyib.
               </div>
             </div>
-
           </div>
         </div>
-
       </div>
     </main>
   </div>
 </div>
 
-<!-- PRODUCT MODAL -->
+<!-- Mobile Bottom Navigation -->
+<div class="mobile-nav lg:hidden">
+  <div class="mobile-nav-item active" onclick="showPage('dashboard')">
+    <i class="fas fa-th-large text-lg"></i>
+    <span>Dashboard</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('categories')">
+    <i class="fas fa-list text-lg"></i>
+    <span>Kateqoriya</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('products')">
+    <i class="fas fa-utensils text-lg"></i>
+    <span>Məhsul</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('tables')">
+    <i class="fas fa-chair text-lg"></i>
+    <span>Masa</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('settings')">
+    <i class="fas fa-cog text-lg"></i>
+    <span>Parametr</span>
+  </div>
+</div>
+
+<!-- Product Modal -->
 <div id="product-modal" class="modal">
   <div class="modal-content">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-gray-800" id="product-modal-title">Yeni Məhsul</h3>
-      <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600">
+    <div class="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800" id="product-modal-title">Yeni Məhsul</h3>
+      <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center">
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-
-    <div class="p-6 space-y-6">
+    <div class="p-4 sm:p-6 space-y-6">
+      <!-- Availability Toggle -->
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
         <div>
           <p class="font-semibold text-gray-800">Məhsul Vəziyyəti</p>
@@ -652,70 +617,74 @@
         </label>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Names -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (AZ)</label>
-          <input type="text" id="prod-name-az" oninput="handleProductFieldInput('name','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məsələn: Lülə kabab">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı (AZ) *</label>
+          <input type="text" id="prod-name-az" oninput="handleProductFieldInput('name','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="Məsələn: Lülə kabab">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Product name (EN)</label>
-          <input type="text" id="prod-name-en" oninput="handleProductFieldInput('name','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Example: Lyulya kebab">
+          <input type="text" id="prod-name-en" oninput="handleProductFieldInput('name','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="Example: Lyulya kebab">
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Descriptions -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (AZ)</label>
-          <textarea id="prod-desc-az" rows="4" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+          <textarea id="prod-desc-az" rows="3" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500"></textarea>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Description (EN)</label>
-          <textarea id="prod-desc-en" rows="4" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+          <textarea id="prod-desc-en" rows="3" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500"></textarea>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Category & Price -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Kateqoriya</label>
-          <select id="prod-category" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Kateqoriya *</label>
+          <select id="prod-category" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500 bg-white">
             <option value="">Seçin...</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼)</label>
-          <input type="number" id="prod-price" step="0.01" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼) *</label>
+          <input type="number" id="prod-price" step="0.01" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="0.00">
         </div>
       </div>
 
+      <!-- Specs -->
       <div class="specs-grid">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Həcm</label>
-          <input type="text" id="prod-volume" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <input type="text" id="prod-volume" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="Məs: 200qr">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Hazırlanma vaxtı</label>
-          <input type="text" id="prod-time" value="3min" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <input type="text" id="prod-time" value="15 dəq" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">ƏDV</label>
-          <input type="text" id="prod-vat" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+          <input type="text" id="prod-vat" class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="18%">
         </div>
       </div>
 
-      <!-- VIDEO SECTION -->
+      <!-- Video Upload -->
       <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
         <div class="flex items-center gap-2 mb-3">
           <i class="fas fa-video text-blue-600"></i>
           <label class="block text-sm font-medium text-gray-700">Yemək Videosu</label>
         </div>
         <div class="flex gap-2 mb-3">
-          <input type="file" id="prod-video-file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white" onchange="handleVideoFileInput(this)">
+          <input type="file" id="prod-video-file" accept="video/mp4,video/webm,video/quicktime" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white" onchange="handleVideoFileInput(this)">
           <input type="hidden" id="prod-video-url">
           <button type="button" onclick="clearVideo()" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
             <i class="fas fa-trash"></i>
           </button>
         </div>
-        <p class="text-xs text-gray-500 mb-2">Video fayl yükləyin (MP4, WebM, MOV). Link əlavə etmək tələb olunmur.</p>
+        <p class="text-xs text-gray-500 mb-2">Video fayl yükləyin (MP4, WebM, MOV). Maksimum 50MB.</p>
         <div id="video-preview-container" class="hidden">
           <div class="video-preview-container">
             <video id="video-preview-player" controls poster="">
@@ -729,16 +698,15 @@
         </div>
       </div>
 
+      <!-- Images -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər</label>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Şəkillər *</label>
         <div class="drag-area" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
           <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
           <p class="text-sm text-gray-600">Şəkilləri bura sürükləyin və ya <span class="text-green-700 font-medium cursor-pointer" onclick="document.getElementById('file-input').click()">seçin</span></p>
           <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
         </div>
-
         <div id="image-preview" class="image-gallery mt-4"></div>
-
         <div id="upload-progress" class="hidden mt-2">
           <div class="flex justify-between text-xs text-gray-600 mb-1">
             <span>Yüklənir...</span>
@@ -750,23 +718,23 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-6 flex-wrap">
+      <!-- Flags -->
+      <div class="flex flex-wrap items-center gap-4 sm:gap-6">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded">
+          <input type="checkbox" id="prod-popular" class="w-4 h-4 text-green-900 rounded focus:ring-green-500">
           <span class="text-sm text-gray-700">Populyar</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded">
+          <input type="checkbox" id="prod-new" class="w-4 h-4 text-green-900 rounded focus:ring-green-500">
           <span class="text-sm text-gray-700">Yeni</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="prod-recommended" class="w-4 h-4 text-green-900 rounded">
+          <input type="checkbox" id="prod-recommended" class="w-4 h-4 text-green-900 rounded focus:ring-green-500">
           <span class="text-sm text-gray-700">Tövsiyə olunan</span>
         </label>
       </div>
     </div>
-
-    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+    <div class="p-4 sm:p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
       <button onclick="closeProductModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
       <button onclick="saveProduct()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
         <i class="fas fa-save"></i> Saxla
@@ -775,16 +743,16 @@
   </div>
 </div>
 
-<!-- VIDEO MODAL -->
+<!-- Video Modal -->
 <div id="video-modal" class="modal">
   <div class="modal-content max-w-4xl">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-gray-800">Yemək Videosu</h3>
-      <button onclick="closeVideoModal()" class="text-gray-400 hover:text-gray-600">
+    <div class="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800">Yemək Videosu</h3>
+      <button onclick="closeVideoModal()" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center">
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-    <div class="p-6">
+    <div class="p-4 sm:p-6">
       <div class="relative w-full" style="padding-bottom: 56.25%;">
         <video id="modal-video-player" controls class="absolute inset-0 w-full h-full rounded-xl bg-black">
           <source src="" type="video/mp4">
@@ -795,22 +763,20 @@
   </div>
 </div>
 
-<!-- CATEGORY MODAL -->
+<!-- Category Modal -->
 <div id="category-modal" class="modal">
   <div class="modal-content max-w-md">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-gray-800" id="category-modal-title">Yeni Kateqoriya</h3>
-      <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600">
+    <div class="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800" id="category-modal-title">Yeni Kateqoriya</h3>
+      <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center">
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-
-    <div class="p-6 space-y-4">
+    <div class="p-4 sm:p-6 space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Ad (AZ)</label>
-        <input type="text" id="cat-name-az" oninput="translateCategoryName()" class="w-full px-4 py-2 rounded-lg border border-gray-200" placeholder="Məsələn: Əsas Yeməklər">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Ad (AZ) *</label>
+        <input type="text" id="cat-name-az" oninput="translateCategoryName()" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="Məsələn: Əsas Yeməklər">
       </div>
-
       <div id="cat-translation-box" class="rounded-xl p-4 text-white hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="flex items-center gap-2 mb-2">
           <i class="fas fa-language"></i>
@@ -818,31 +784,28 @@
         </div>
         <p class="text-sm opacity-90">İngiliscə: <span id="cat-translated-text" class="font-bold"></span></p>
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">İkon</label>
         <div class="flex gap-2 flex-wrap" id="icon-selector">
-          <button type="button" onclick="selectIcon('🍽️')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍽️</button>
-          <button type="button" onclick="selectIcon('🥗')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥗</button>
-          <button type="button" onclick="selectIcon('🍔')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍔</button>
-          <button type="button" onclick="selectIcon('🍕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍕</button>
-          <button type="button" onclick="selectIcon('🍰')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍰</button>
-          <button type="button" onclick="selectIcon('☕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">☕</button>
-          <button type="button" onclick="selectIcon('🥤')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥤</button>
-          <button type="button" onclick="selectIcon('🍷')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍷</button>
-          <button type="button" onclick="selectIcon('🍹')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🍹</button>
-          <button type="button" onclick="selectIcon('🥩')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl">🥩</button>
+          <button type="button" onclick="selectIcon('🍽️')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍽️</button>
+          <button type="button" onclick="selectIcon('🥗')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🥗</button>
+          <button type="button" onclick="selectIcon('🍔')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍔</button>
+          <button type="button" onclick="selectIcon('🍕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍕</button>
+          <button type="button" onclick="selectIcon('🍰')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍰</button>
+          <button type="button" onclick="selectIcon('☕')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">☕</button>
+          <button type="button" onclick="selectIcon('🥤')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🥤</button>
+          <button type="button" onclick="selectIcon('🍷')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍷</button>
+          <button type="button" onclick="selectIcon('🍹')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🍹</button>
+          <button type="button" onclick="selectIcon('🥩')" class="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-xl hover:border-green-500">🥩</button>
         </div>
         <input type="hidden" id="cat-icon" value="🍽️">
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Sıra nömrəsi</label>
-        <input type="number" id="cat-sort" value="0" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        <input type="number" id="cat-sort" value="0" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500">
       </div>
     </div>
-
-    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+    <div class="p-4 sm:p-6 border-t border-gray-100 flex justify-end gap-3">
       <button onclick="closeCategoryModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
       <button onclick="saveCategory()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
         <i class="fas fa-save"></i> Saxla
@@ -851,28 +814,27 @@
   </div>
 </div>
 
-<!-- TABLE MODAL -->
+<!-- Table Modal -->
 <div id="table-modal" class="modal">
   <div class="modal-content max-w-md">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-gray-800" id="table-modal-title">Yeni Masa</h3>
-      <button onclick="closeTableModal()" class="text-gray-400 hover:text-gray-600">
+    <div class="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-lg sm:text-xl font-bold text-gray-800" id="table-modal-title">Yeni Masa</h3>
+      <button onclick="closeTableModal()" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center">
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-
-    <div class="p-6 space-y-4">
+    <div class="p-4 sm:p-6 space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Masa Nömrəsi</label>
-        <input type="text" id="table-number" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Masa Nömrəsi *</label>
+        <input type="text" id="table-number" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500" placeholder="Məs: 1A">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Tutumu</label>
-        <input type="number" id="table-capacity" value="4" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        <input type="number" id="table-capacity" value="4" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Yerləşmə</label>
-        <select id="table-location" class="w-full px-4 py-2 rounded-lg border border-gray-200">
+        <select id="table-location" class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500 bg-white">
           <option value="inside">İçəri</option>
           <option value="outside">Çöl</option>
           <option value="terrace">Terras</option>
@@ -880,8 +842,7 @@
         </select>
       </div>
     </div>
-
-    <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+    <div class="p-4 sm:p-6 border-t border-gray-100 flex justify-end gap-3">
       <button onclick="closeTableModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
       <button onclick="saveTable()" class="px-6 py-2 bg-green-900 text-white rounded-lg hover:bg-green-800 flex items-center gap-2">
         <i class="fas fa-save"></i> Saxla
@@ -890,25 +851,23 @@
   </div>
 </div>
 
-<!-- QR MODAL -->
+<!-- QR Modal -->
 <div id="qr-modal" class="modal">
-  <div class="modal-content max-w-md">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-gray-800">QR Kod - <span id="qr-table-name"></span></h3>
-      <button onclick="closeQrModal()" class="text-gray-400 hover:text-gray-600">
+  <div class="modal-content max-w-sm">
+    <div class="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-gray-800">QR Kod - <span id="qr-table-name"></span></h3>
+      <button onclick="closeQrModal()" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center">
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-
-    <div class="p-6 text-center">
+    <div class="p-4 sm:p-6 text-center">
       <div id="qr-code-display" class="flex justify-center p-5 bg-white rounded-xl mb-4"></div>
       <p class="text-sm text-gray-500 mb-4">Müştərilər bu QR kodu skan edərək menyuya baxa bilərlər</p>
-
       <div class="flex gap-2">
-        <button onclick="downloadQR()" class="flex-1 bg-green-900 text-white py-3 rounded-lg hover:bg-green-800 flex items-center justify-center gap-2">
+        <button onclick="downloadQR()" class="flex-1 bg-green-900 text-white py-3 rounded-lg hover:bg-green-800 flex items-center justify-center gap-2 text-sm">
           <i class="fas fa-download"></i> Yüklə
         </button>
-        <button onclick="printQR()" class="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+        <button onclick="printQR()" class="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
           <i class="fas fa-print"></i> Çap et
         </button>
       </div>
@@ -918,13 +877,13 @@
 
 <script>
 // ============================================
-// CONFIGURATION - UPDATE THIS URL
+// CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPMJA52jhbfcYTWweDi5qDIHXHyxsbjdEC_eaEtW2Ui5e-ItZkI703o_hNfFfzNGI1HQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzgIQ4EWmieaOTS4pyypXMK1bpAxHDqGK5UFx6pBJWTmjoH33efT4jjhlbD4ZNGE6ukeA/exec',
   DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
   AUTO_SYNC: true,
-  SYNC_DELAY: 1000
+  SYNC_DELAY: 500
 };
 
 // ============================================
@@ -944,10 +903,12 @@ let editingCategoryId = null;
 let editingTableId = null;
 let currentQRTable = null;
 let syncTimeout = null;
+
 let currentLogo = settings.logo || null;
 let currentHeroImage = settings.heroImage || null;
 let currentPopupImage = settings.popupImage || null;
 let bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
+
 let productTranslateTimer = null;
 let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
@@ -956,6 +917,14 @@ let weeklyChart = null;
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type}`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -963,25 +932,6 @@ function escapeHtml(value = '') {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
-}
-
-function showSyncIndicator(text, type) {
-  const indicator = document.getElementById('sync-indicator');
-  const textEl = document.getElementById('sync-text');
-  indicator.className = `sync-indicator sync-${type}`;
-  textEl.textContent = text;
-  indicator.classList.remove('hidden');
-}
-
-function hideSyncIndicator() {
-  document.getElementById('sync-indicator').classList.add('hidden');
-}
-
-function showSyncBadge() {
-  const badge = document.getElementById('sync-status-badge');
-  if (!badge) return;
-  badge.classList.remove('hidden');
-  setTimeout(() => badge.classList.add('hidden'), 2500);
 }
 
 function safeNumber(value, fallback = 0) {
@@ -998,62 +948,21 @@ function saveLocalState() {
   localStorage.setItem('settings', JSON.stringify(settings));
 }
 
-function parsePossibleJson(value, fallback) {
-  if (value == null || value === '') return fallback;
-  if (typeof value === 'object') return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-
-
 function normalizeProduct(product = {}) {
   const normalized = { ...(product || {}) };
-
   if (!Array.isArray(normalized.images)) {
     if (typeof normalized.imagesJson === 'string') {
-      normalized.images = parsePossibleJson(normalized.imagesJson, []);
-    } else if (Array.isArray(normalized.imagesJson)) {
-      normalized.images = normalized.imagesJson;
-    } else if (typeof normalized.imageUrl === 'string' && normalized.imageUrl.trim()) {
-      normalized.images = [normalized.imageUrl.trim()];
+      try {
+        normalized.images = JSON.parse(normalized.imagesJson);
+      } catch {
+        normalized.images = [];
+      }
     } else {
       normalized.images = [];
     }
   }
-
   normalized.images = normalized.images.filter(img => typeof img === 'string' && img.trim());
-  normalized.imagesJson = JSON.stringify(normalized.images);
-  normalized.imageUrl = normalized.imageUrl || normalized.images[0] || '';
-
-  if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
-  if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
-
   return normalized;
-}
-
-function normalizeServerPayload(data) {
-  const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
-
-  const normalizedSettings = src.settings && typeof src.settings === 'object' ? src.settings : {};
-
-  if (typeof normalizedSettings.bannerImages === 'string') {
-    normalizedSettings.bannerImages = parsePossibleJson(normalizedSettings.bannerImages, []);
-  }
-  if (!Array.isArray(normalizedSettings.bannerImages)) {
-    normalizedSettings.bannerImages = [];
-  }
-
-  return {
-    categories: Array.isArray(src.categories) ? src.categories : [],
-    products: Array.isArray(src.products) ? src.products.map(normalizeProduct) : [],
-    orders: Array.isArray(src.orders) ? src.orders : [],
-    tables: Array.isArray(src.tables) ? src.tables : [],
-    reservations: Array.isArray(src.reservations) ? src.reservations : [],
-    settings: normalizedSettings
-  };
 }
 
 // ============================================
@@ -1062,12 +971,9 @@ function normalizeServerPayload(data) {
 async function translateViaAppsScript(text, source, target) {
   if (!text || !text.trim()) return '';
   try {
-    const response = await fetch(
-      `${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`
-    );
+    const response = await fetch(`${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`);
     const data = await response.json();
-    if (data.success) return data.translated || '';
-    return '';
+    return data.success ? (data.translated || '') : '';
   } catch (e) {
     console.error(e);
     return '';
@@ -1076,147 +982,81 @@ async function translateViaAppsScript(text, source, target) {
 
 async function uploadImageToDrive(base64Image, fileName) {
   try {
-    showSyncIndicator('Şəkil yüklənir...', 'loading');
-
     const result = await postAppsScript('uploadImage', {
       image: base64Image,
       fileName: fileName || `image_${Date.now()}.jpg`,
       folderId: CONFIG.DRIVE_FOLDER_ID
     });
-
     if (result.success) {
-      showSyncIndicator('Şəkil yükləndi!', 'success');
-      setTimeout(hideSyncIndicator, 1200);
       return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
     }
-
     throw new Error(result.error || 'Upload error');
   } catch (error) {
     console.error('Upload error:', error);
-    showSyncIndicator('Şəkil yüklənmədi!', 'error');
-    setTimeout(hideSyncIndicator, 2200);
+    showToast('Şəkil yüklənmədi!', 'error');
     return null;
   }
 }
 
 async function uploadVideoToDrive(base64Video, fileName) {
   try {
-    showSyncIndicator('Video yüklənir...', 'loading');
-
     const result = await postAppsScript('uploadVideo', {
       video: base64Video,
       fileName: fileName || `video_${Date.now()}.mp4`,
       folderId: CONFIG.DRIVE_FOLDER_ID
     });
-
     if (result.success) {
-      showSyncIndicator('Video yükləndi!', 'success');
-      setTimeout(hideSyncIndicator, 1200);
-      return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
+      return result.directUrl || result.viewUrl || null;
     }
-
     throw new Error(result.error || 'Video upload error');
   } catch (error) {
     console.error('Video upload error:', error);
-    showSyncIndicator('Video yüklənmədi!', 'error');
-    setTimeout(hideSyncIndicator, 2200);
+    showToast('Video yüklənmədi!', 'error');
     return null;
-  }
-}
-
-async function parseAppsScriptResponse(response) {
-  const raw = await response.text();
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(raw || `HTTP ${response.status}`);
   }
 }
 
 async function postAppsScript(action, payload = {}) {
   const jsonPayload = { action, ...payload };
-  
-  // Try JSON first
   try {
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(jsonPayload)
     });
-    return await parseAppsScriptResponse(response);
+    return await response.json();
   } catch (jsonError) {
-    console.log('JSON request failed, trying form data...', jsonError);
+    const formPayload = new URLSearchParams();
+    formPayload.append('action', action);
+    Object.entries(payload).forEach(([key, value]) => {
+      formPayload.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+    });
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formPayload.toString()
+    });
+    return await response.json();
   }
-
-  // Fallback to form data
-  const formPayload = new URLSearchParams();
-  formPayload.append('action', action);
-  
-  Object.entries(payload).forEach(([key, value]) => {
-    if (typeof value === 'object') {
-      formPayload.append(key, JSON.stringify(value));
-    } else {
-      formPayload.append(key, String(value));
-    }
-  });
-
-  const response = await fetch(CONFIG.GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formPayload.toString()
-  });
-  
-  return await parseAppsScriptResponse(response);
 }
 
 function buildSyncPayload() {
   const cleanSettings = { ...settings };
-
-  // Remove base64 data from settings
   if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
   if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
   if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
-
-  if (!Array.isArray(cleanSettings.bannerImages)) {
-    cleanSettings.bannerImages = [];
-  } else {
-    cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
-      const normalized = { ...(item || {}) };
-      if (typeof normalized.image === 'string' && normalized.image.startsWith('data:')) {
-        normalized.image = '';
-      }
-      return normalized;
-    });
-  }
-
+  
   const cleanProducts = products.map(product => {
     const normalized = normalizeProduct(product);
-
     if (Array.isArray(normalized.images)) {
       normalized.images = normalized.images.filter(img => !(typeof img === 'string' && img.startsWith('data:')));
-    } else {
-      normalized.images = [];
     }
-
     if (typeof normalized.videoUrl === 'string' && normalized.videoUrl.startsWith('data:')) {
       normalized.videoUrl = '';
     }
-
     normalized.imagesJson = JSON.stringify(normalized.images);
-    normalized.imageUrl = normalized.images[0] || '';
-
     return normalized;
   });
-
-  const cleanBannerImages = Array.isArray(cleanSettings.bannerImages)
-    ? cleanSettings.bannerImages.filter(item => item && item.image).map(item => item.image)
-    : [];
-
-  cleanSettings.logoUrl = cleanSettings.logo || '';
-  cleanSettings.headerImage = cleanSettings.heroImage || '';
-  cleanSettings.adImage = cleanSettings.popupImage || '';
-  cleanSettings.bannerImagesJson = JSON.stringify(cleanBannerImages);
-  cleanSettings.bannerImageUrls = cleanBannerImages.join(',');
 
   return {
     categories,
@@ -1228,40 +1068,27 @@ function buildSyncPayload() {
   };
 }
 
-async function syncToGoogleSheets(showToast = true) {
+async function syncToGoogleSheets(showToastMsg = true) {
   try {
-    if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
-
     const payload = buildSyncPayload();
-    
-    // Try multiple action names for compatibility
     const actions = ['syncData', 'saveMenu', 'updateMenu'];
     let lastError = null;
-
+    
     for (const action of actions) {
       try {
         const result = await postAppsScript(action, { data: payload });
         if (result?.success) {
-          if (showToast) {
-            showSyncIndicator('Sinxronizasiya edildi!', 'success');
-            showSyncBadge();
-            setTimeout(hideSyncIndicator, 2200);
-          }
+          if (showToastMsg) showToast('Sinxronizasiya edildi!');
           return result;
         }
       } catch (error) {
         lastError = error;
-        console.log(`Action ${action} failed:`, error);
       }
     }
-
     throw lastError || new Error('All sync actions failed');
   } catch (error) {
     console.error('Sync error:', error);
-    if (showToast) {
-      showSyncIndicator('Sinxronizasiya xətası!', 'error');
-      setTimeout(hideSyncIndicator, 2400);
-    }
+    if (showToastMsg) showToast('Sinxronizasiya xətası!', 'error');
     throw error;
   }
 }
@@ -1269,9 +1096,7 @@ async function syncToGoogleSheets(showToast = true) {
 function debouncedSync() {
   if (!CONFIG.AUTO_SYNC) return;
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => {
-    syncToGoogleSheets(false);
-  }, CONFIG.SYNC_DELAY);
+  syncTimeout = setTimeout(() => syncToGoogleSheets(false), CONFIG.SYNC_DELAY);
 }
 
 async function immediateSync() {
@@ -1285,37 +1110,30 @@ async function manualSync() {
 
 async function loadInitialDataFromServer() {
   try {
-    showSyncIndicator('Məlumatlar yüklənir...', 'loading');
-    
-    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { 
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, {
       cache: 'no-store',
       headers: { 'Accept': 'application/json' }
     });
+    const data = await response.json();
     
-    const raw = await response.json();
-    const data = normalizeServerPayload(raw);
-
-    categories = data.categories;
-    products = data.products;
-    orders = data.orders;
-    tables = data.tables;
-    reservations = data.reservations;
-    settings = data.settings;
-
-    currentLogo = settings.logo || null;
-    currentHeroImage = settings.heroImage || null;
-    currentPopupImage = settings.popupImage || null;
-    bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
-
-    saveLocalState();
-    hideSyncIndicator();
-    
-    // Refresh UI
-    initApp();
+    if (data.success && data.data) {
+      categories = data.data.categories || [];
+      products = (data.data.products || []).map(normalizeProduct);
+      orders = data.data.orders || [];
+      tables = data.data.tables || [];
+      reservations = data.data.reservations || [];
+      settings = data.data.settings || {};
+      
+      currentLogo = settings.logo || null;
+      currentHeroImage = settings.heroImage || null;
+      currentPopupImage = settings.popupImage || null;
+      bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
+      
+      saveLocalState();
+      initApp();
+    }
   } catch (e) {
     console.error('Initial load error:', e);
-    hideSyncIndicator();
-    // Use local data if server fails
     initApp();
   }
 }
@@ -1337,20 +1155,18 @@ function togglePassword() {
 
 async function handleLogin(e) {
   e.preventDefault();
-
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value;
-
+  
   if (username !== 'admin' || password !== 'admin123') {
     document.getElementById('login-error').classList.remove('hidden');
     return;
   }
-
+  
   document.getElementById('login-error').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
-
-  // Load data from server
+  
   await loadInitialDataFromServer();
 }
 
@@ -1358,7 +1174,6 @@ function logout() {
   document.getElementById('main-app').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('password').value = '';
-  document.getElementById('login-error').classList.add('hidden');
 }
 
 // ============================================
@@ -1368,29 +1183,33 @@ function showPage(pageName) {
   document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
   const selected = document.getElementById('page-' + pageName);
   if (selected) selected.classList.remove('hidden');
-
+  
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active', 'text-white');
     item.classList.add('text-gray-300');
   });
-
+  
   const activeNav = document.getElementById('nav-' + pageName);
   if (activeNav) {
     activeNav.classList.add('active', 'text-white');
     activeNav.classList.remove('text-gray-300');
   }
-
+  
+  document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+  event?.target?.closest('.mobile-nav-item')?.classList.add('active');
+  
   const titles = {
     dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
     categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
     products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
     tables: ['Masalar', 'Masa və QR kodları idarə edin'],
+    reservations: ['Rezervasiyalar', 'Masa rezervasiyalarını idarə edin'],
     settings: ['Parametrlər', 'Restoran məlumatları və banner konfiqurasiyası']
   };
-
+  
   document.getElementById('page-title').textContent = titles[pageName][0];
   document.getElementById('page-subtitle').textContent = titles[pageName][1];
-
+  
   if (pageName === 'dashboard') {
     setTimeout(initCharts, 80);
     updateDashboard();
@@ -1401,9 +1220,13 @@ function showPage(pageName) {
     updateCategoryFilter();
   } else if (pageName === 'tables') {
     renderTables();
+  } else if (pageName === 'reservations') {
+    renderReservations();
   } else if (pageName === 'settings') {
     loadSettings();
   }
+  
+  window.scrollTo(0, 0);
 }
 
 // ============================================
@@ -1416,11 +1239,11 @@ function openCategoryModal(categoryId = null) {
   document.getElementById('cat-icon').value = '🍽️';
   document.getElementById('cat-sort').value = '0';
   document.getElementById('cat-translation-box').classList.add('hidden');
-
+  
   document.querySelectorAll('#icon-selector button').forEach(btn => {
     btn.classList.remove('border-green-900', 'bg-green-50');
   });
-
+  
   if (categoryId) {
     const cat = categories.find(c => Number(c.id) === Number(categoryId));
     if (cat) {
@@ -1428,19 +1251,20 @@ function openCategoryModal(categoryId = null) {
       document.getElementById('cat-icon').value = cat.icon || '🍽️';
       document.getElementById('cat-sort').value = cat.sortOrder || 0;
       selectIcon(cat.icon || '🍽️');
-
       if (cat.nameEn) {
         document.getElementById('cat-translation-box').classList.remove('hidden');
         document.getElementById('cat-translated-text').textContent = cat.nameEn;
       }
     }
   }
-
+  
   document.getElementById('category-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeCategoryModal() {
   document.getElementById('category-modal').classList.remove('active');
+  document.body.style.overflow = '';
   editingCategoryId = null;
 }
 
@@ -1459,12 +1283,12 @@ async function saveCategory() {
   const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
   const icon = document.getElementById('cat-icon').value;
   const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
-
+  
   if (!nameAz) {
-    alert('Kateqoriya adı daxil edin');
+    showToast('Kateqoriya adı daxil edin', 'error');
     return;
   }
-
+  
   const catData = {
     id: editingCategoryId || Date.now(),
     nameAz,
@@ -1472,47 +1296,41 @@ async function saveCategory() {
     icon,
     sortOrder,
     active: true,
-    createdAt: editingCategoryId
-      ? (categories.find(c => Number(c.id) === Number(editingCategoryId))?.createdAt || new Date().toISOString())
-      : new Date().toISOString()
+    createdAt: editingCategoryId ? (categories.find(c => Number(c.id) === Number(editingCategoryId))?.createdAt || new Date().toISOString()) : new Date().toISOString()
   };
-
+  
   if (editingCategoryId) {
     const index = categories.findIndex(c => Number(c.id) === Number(editingCategoryId));
     if (index > -1) categories[index] = catData;
   } else {
     categories.unshift(catData);
   }
-
+  
   saveLocalState();
   closeCategoryModal();
   renderCategories();
   updateCategoryFilter();
   updateStats();
-  updateDashboard();
   await immediateSync();
 }
 
 function renderCategories() {
   const grid = document.getElementById('categories-grid');
   const search = (document.getElementById('category-search')?.value || '').toLowerCase();
-
+  
   const filtered = [...categories]
     .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-    .filter(c =>
-      (c.nameAz || '').toLowerCase().includes(search) ||
-      (c.nameEn || '').toLowerCase().includes(search)
-    );
-
+    .filter(c => (c.nameAz || '').toLowerCase().includes(search) || (c.nameEn || '').toLowerCase().includes(search));
+  
   document.getElementById('category-count').textContent = filtered.length;
-
+  
   if (!filtered.length) {
     grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>';
     return;
   }
-
+  
   grid.innerHTML = filtered.map(cat => `
-    <div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
+    <div class="bg-white rounded-2xl p-5 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
       <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon || '🍽️'}</div>
       <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
       <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
@@ -1531,26 +1349,22 @@ function filterCategories() {
 function updateCategoryFilter() {
   const select = document.getElementById('category-filter');
   if (!select) return;
-
   select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
-  [...categories]
-    .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-    .forEach(cat => {
-      select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-    });
+  [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0)).forEach(cat => {
+    select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+  });
 }
 
 function translateCategoryName() {
   const azText = document.getElementById('cat-name-az').value.trim();
   const box = document.getElementById('cat-translation-box');
-
   clearTimeout(categoryTranslateTimer);
-
+  
   if (!azText) {
     box.classList.add('hidden');
     return;
   }
-
+  
   categoryTranslateTimer = setTimeout(async () => {
     const translated = await translateViaAppsScript(azText, 'az', 'en');
     if (translated) {
@@ -1568,31 +1382,29 @@ function translateCategoryName() {
 async function handleVideoFileInput(input) {
   const file = input?.files?.[0];
   if (!file) return;
-
+  
   if (!file.type.startsWith('video/')) {
-    alert('Zəhmət olmasa video faylı seçin');
+    showToast('Zəhmət olmasa video faylı seçin', 'error');
     input.value = '';
     return;
   }
-
+  
   const maxSize = 50 * 1024 * 1024;
   if (file.size > maxSize) {
-    alert('Video ölçüsü 50MB-dan çox ola bilməz');
+    showToast('Video ölçüsü 50MB-dan çox ola bilməz', 'error');
     input.value = '';
     return;
   }
-
+  
   const reader = new FileReader();
   reader.onload = async function(ev) {
     const base64Video = ev.target.result;
     const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
-
     if (!uploadedUrl) {
-      alert('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.');
+      showToast('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.', 'error');
       clearVideo();
       return;
     }
-    
     document.getElementById('prod-video-url').value = uploadedUrl;
     currentProductVideo = uploadedUrl;
     updateVideoPreview();
@@ -1604,12 +1416,12 @@ function updateVideoPreview() {
   const videoUrl = document.getElementById('prod-video-url').value.trim();
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
-
+  
   if (!videoUrl) {
     previewContainer.classList.add('hidden');
     return;
   }
-
+  
   videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
   videoPlayer.load();
   previewContainer.classList.remove('hidden');
@@ -1627,10 +1439,10 @@ function openVideoModal(videoUrl) {
   if (!videoUrl) return;
   const modal = document.getElementById('video-modal');
   const player = document.getElementById('modal-video-player');
-  
   player.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
   player.load();
   modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeVideoModal() {
@@ -1638,6 +1450,7 @@ function closeVideoModal() {
   const player = document.getElementById('modal-video-player');
   player.pause();
   modal.classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 // ============================================
@@ -1646,27 +1459,24 @@ function closeVideoModal() {
 function handleProductFieldInput(fieldType, lang, value) {
   const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
   if (!autoTranslateEnabled || isProductAutoTranslating) return;
-
+  
   clearTimeout(productTranslateTimer);
-
   productTranslateTimer = setTimeout(async () => {
     const cleanValue = (value || '').trim();
-
     const targetIdMap = {
       name: { az: 'prod-name-en', en: 'prod-name-az' },
       desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
     };
-
     const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
     if (!targetElement) return;
-
+    
     if (!cleanValue) {
       isProductAutoTranslating = true;
       targetElement.value = '';
       isProductAutoTranslating = false;
       return;
     }
-
+    
     isProductAutoTranslating = true;
     const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
     if (translatedText) targetElement.value = translatedText;
@@ -1678,8 +1488,8 @@ function openProductModal(productId = null) {
   editingProductId = productId;
   currentProductImages = [];
   currentProductVideo = '';
+  
   document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
-
   document.getElementById('prod-name-az').value = '';
   document.getElementById('prod-name-en').value = '';
   document.getElementById('prod-desc-az').value = '';
@@ -1687,7 +1497,7 @@ function openProductModal(productId = null) {
   document.getElementById('prod-category').value = '';
   document.getElementById('prod-price').value = '';
   document.getElementById('prod-volume').value = '';
-  document.getElementById('prod-time').value = '3min';
+  document.getElementById('prod-time').value = '15 dəq';
   document.getElementById('prod-vat').value = '';
   document.getElementById('prod-video-url').value = '';
   document.getElementById('prod-video-file').value = '';
@@ -1700,15 +1510,13 @@ function openProductModal(productId = null) {
   document.getElementById('availability-label').classList.remove('text-red-600');
   document.getElementById('availability-label').classList.add('text-green-600');
   document.getElementById('image-preview').innerHTML = '';
-
+  
   const catSelect = document.getElementById('prod-category');
   catSelect.innerHTML = '<option value="">Seçin...</option>';
-  [...categories]
-    .sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-    .forEach(cat => {
-      catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-    });
-
+  [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0)).forEach(cat => {
+    catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
+  });
+  
   if (productId) {
     const product = products.find(p => Number(p.id) === Number(productId));
     if (product) {
@@ -1719,35 +1527,37 @@ function openProductModal(productId = null) {
       document.getElementById('prod-category').value = product.categoryId || '';
       document.getElementById('prod-price').value = product.price || '';
       document.getElementById('prod-volume').value = product.specs?.volume || '';
-      document.getElementById('prod-time').value = product.specs?.time || '3min';
+      document.getElementById('prod-time').value = product.specs?.time || '15 dəq';
       document.getElementById('prod-vat').value = product.vat || '';
       document.getElementById('prod-popular').checked = !!product.popular;
       document.getElementById('prod-new').checked = !!product.isNew;
       document.getElementById('prod-recommended').checked = !!product.recommended;
       document.getElementById('prod-available').checked = product.available !== false;
-
-      if (product.videoUrl) {
-        document.getElementById('prod-video-url').value = product.videoUrl;
-        currentProductVideo = product.videoUrl;
-        updateVideoPreview();
-      }
-
+      
       if (product.available === false) {
         document.getElementById('availability-label').textContent = 'Bitdi';
         document.getElementById('availability-label').classList.remove('text-green-600');
         document.getElementById('availability-label').classList.add('text-red-600');
       }
-
+      
+      if (product.videoUrl) {
+        document.getElementById('prod-video-url').value = product.videoUrl;
+        currentProductVideo = product.videoUrl;
+        updateVideoPreview();
+      }
+      
       currentProductImages = Array.isArray(product.images) ? [...product.images] : [];
       renderImagePreview();
     }
   }
-
+  
   document.getElementById('product-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeProductModal() {
   document.getElementById('product-modal').classList.remove('active');
+  document.body.style.overflow = '';
   editingProductId = null;
   currentProductImages = [];
   currentProductVideo = '';
@@ -1823,50 +1633,49 @@ async function saveProduct() {
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
   const videoUrl = document.getElementById('prod-video-url').value.trim();
-
+  
   if (!nameAz || !categoryId || !price) {
-    alert('Vacib xanaları doldurun');
+    showToast('Vacib xanaları doldurun (Ad, Kateqoriya, Qiymət)', 'error');
     return;
   }
-
+  
   if (!nameEn) {
     nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz;
     document.getElementById('prod-name-en').value = nameEn;
   }
-
+  
   if (!descEn && descAz) {
     descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz;
     document.getElementById('prod-desc-en').value = descEn;
   }
-
+  
+  // Upload images to Drive
   const progressDiv = document.getElementById('upload-progress');
   const totalImages = currentProductImages.length;
   const uploadedImages = [];
-
-  if (totalImages > 0) progressDiv.classList.remove('hidden');
-
-  for (let i = 0; i < currentProductImages.length; i++) {
-    const img = currentProductImages[i];
-    const percent = Math.round(((i + 1) / totalImages) * 100);
-    document.getElementById('upload-percent').textContent = percent + '%';
-    document.getElementById('progress-fill').style.width = percent + '%';
-
-    if (typeof img === 'string' && img.startsWith('data:')) {
-      const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
-      uploadedImages.push(url || img);
-    } else {
-      uploadedImages.push(img);
+  
+  if (totalImages > 0) {
+    progressDiv.classList.remove('hidden');
+    for (let i = 0; i < currentProductImages.length; i++) {
+      const img = currentProductImages[i];
+      const percent = Math.round(((i + 1) / totalImages) * 100);
+      document.getElementById('upload-percent').textContent = percent + '%';
+      document.getElementById('progress-fill').style.width = percent + '%';
+      
+      if (typeof img === 'string' && img.startsWith('data:')) {
+        const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
+        uploadedImages.push(url || img);
+      } else {
+        uploadedImages.push(img);
+      }
     }
+    progressDiv.classList.add('hidden');
   }
-
-  progressDiv.classList.add('hidden');
-  document.getElementById('upload-percent').textContent = '0%';
-  document.getElementById('progress-fill').style.width = '0%';
-
+  
   const existingCreatedAt = editingProductId
     ? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
     : new Date().toISOString();
-
+  
   const productData = {
     id: editingProductId || Date.now(),
     nameAz,
@@ -1878,7 +1687,6 @@ async function saveProduct() {
     price,
     images: uploadedImages,
     imagesJson: JSON.stringify(uploadedImages),
-    imageUrl: uploadedImages[0] || '',
     videoUrl: videoUrl || '',
     specs: {
       volume: document.getElementById('prod-volume').value.trim(),
@@ -1891,15 +1699,14 @@ async function saveProduct() {
     available,
     createdAt: existingCreatedAt
   };
-
+  
   if (editingProductId) {
     const index = products.findIndex(p => Number(p.id) === Number(editingProductId));
     if (index > -1) products[index] = productData;
   } else {
     products.unshift(productData);
   }
-
-  autoSaveSettings(false);
+  
   saveLocalState();
   closeProductModal();
   renderProducts();
@@ -1912,35 +1719,33 @@ function renderProducts() {
   const grid = document.getElementById('products-grid');
   const search = (document.getElementById('product-search')?.value || '').toLowerCase();
   const categoryFilter = document.getElementById('category-filter')?.value || '';
-
+  
   const filtered = [...products].filter(p => {
-    const matchesSearch =
-      (p.nameAz || '').toLowerCase().includes(search) ||
-      (p.nameEn || '').toLowerCase().includes(search);
-
+    const matchesSearch = (p.nameAz || '').toLowerCase().includes(search) || (p.nameEn || '').toLowerCase().includes(search);
     const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
     return matchesSearch && matchesCategory;
   });
-
+  
   document.getElementById('product-count-header').textContent = filtered.length;
-
+  
   if (!filtered.length) {
     grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>';
     return;
   }
-
+  
   grid.innerHTML = filtered.map(product => {
     const category = categories.find(c => Number(c.id) === Number(product.categoryId));
-
-    let imagesHtml = '';
+    const hasVideo = !!product.videoUrl;
+    
+    let imageHtml = '';
     if (product.images && product.images.length > 0) {
-      if (product.videoUrl) {
-        imagesHtml += `
-          <div class="video-thumbnail relative mb-2 cursor-pointer" onclick="event.stopPropagation(); openVideoModal('${product.videoUrl.replace(/'/g, "\\'")}')">
-            <img src="${product.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[120px] object-cover rounded-lg opacity-80">
-            <div class="play-overlay rounded-lg">
-              <div class="play-icon">
-                <i class="fas fa-play ml-1"></i>
+      if (hasVideo) {
+        imageHtml = `
+          <div class="relative" onclick="event.stopPropagation(); openVideoModal('${product.videoUrl.replace(/'/g, "\\'")}')">
+            <img src="${product.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[160px] object-cover">
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                <i class="fas fa-play text-green-700 ml-1"></i>
               </div>
             </div>
             <div class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
@@ -1948,62 +1753,47 @@ function renderProducts() {
             </div>
           </div>
         `;
-        if (product.images.length > 1) {
-          imagesHtml += '<div class="grid grid-cols-2 gap-2">';
-          product.images.slice(1).forEach((img, idx) => {
-            const safeImg = String(img).replaceAll("'", "\\'");
-            imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 2}" class="w-full h-[80px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-          });
-          imagesHtml += '</div>';
-        }
       } else {
-        imagesHtml += '<div class="grid grid-cols-2 gap-2 mt-3">';
-        product.images.forEach((img, idx) => {
-          const safeImg = String(img).replaceAll("'", "\\'");
-          imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-        });
-        imagesHtml += '</div>';
+        imageHtml = `<img src="${product.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[160px] object-cover">`;
       }
     } else {
-      imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
+      imageHtml = `<div class="h-[160px] bg-gray-100 flex items-center justify-center text-gray-400"><i class="fas fa-image text-3xl"></i></div>`;
     }
-
+    
     const badges = [];
     if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">Populyar</span>');
     if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Yeni</span>');
     if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">Tövsiyə</span>');
-    if (product.videoUrl) badges.push('<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"><i class="fas fa-video mr-1"></i>Video</span>');
-
+    
     const availBadge = product.available !== false
       ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
       : '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
-
+    
     return `
       <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover ${product.available === false ? 'opacity-75' : ''}">
-        <div class="p-5">
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex gap-2 flex-wrap">${badges.join('')}${availBadge}</div>
-            <span class="text-lg font-bold text-gray-800">${safeNumber(product.price).toFixed(2)}₼</span>
+        <div onclick="openProductModal(${product.id})" class="cursor-pointer">
+          ${imageHtml}
+          <div class="p-4">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex gap-1 flex-wrap">${badges.join('')}${availBadge}</div>
+              <span class="text-lg font-bold text-gray-800">${safeNumber(product.price).toFixed(2)}₼</span>
+            </div>
+            <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
+            <p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
+            <p class="text-xs text-gray-400">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
+            ${product.specs?.volume ? `<p class="text-xs text-gray-400 mt-1">${escapeHtml(product.specs.volume)}</p>` : ''}
           </div>
-
-          <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
-          <p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
-          <p class="text-xs text-gray-400 mb-3">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
-
-          ${product.specs?.volume ? `<p class="text-xs text-gray-400 mb-2">${escapeHtml(product.specs.volume)}</p>` : ''}
-          ${imagesHtml}
-
-          <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-            <button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg text-sm font-medium">
-              ${product.available !== false ? 'Bitdi' : 'Mövcud'}
-            </button>
-            <button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
+        </div>
+        <div class="px-4 pb-4 flex gap-2">
+          <button onclick="toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg text-sm font-medium">
+            ${product.available !== false ? 'Bitdi' : 'Mövcud'}
+          </button>
+          <button onclick="openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
     `;
@@ -2027,7 +1817,6 @@ function toggleProductAvailability(productId) {
 function deleteProduct(id) {
   if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
     products = products.filter(p => Number(p.id) !== Number(id));
-    autoSaveSettings(false);
     saveLocalState();
     renderProducts();
     updateStats();
@@ -2045,7 +1834,7 @@ function openTableModal(tableId = null) {
   document.getElementById('table-number').value = '';
   document.getElementById('table-capacity').value = '4';
   document.getElementById('table-location').value = 'inside';
-
+  
   if (tableId) {
     const table = tables.find(t => Number(t.id) === Number(tableId));
     if (table) {
@@ -2054,12 +1843,14 @@ function openTableModal(tableId = null) {
       document.getElementById('table-location').value = table.location || 'inside';
     }
   }
-
+  
   document.getElementById('table-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeTableModal() {
   document.getElementById('table-modal').classList.remove('active');
+  document.body.style.overflow = '';
   editingTableId = null;
 }
 
@@ -2067,19 +1858,20 @@ async function saveTable() {
   const number = document.getElementById('table-number').value.trim();
   const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
   const location = document.getElementById('table-location').value;
-
+  
   if (!number) {
-    alert('Masa nömrəsi daxil edin');
+    showToast('Masa nömrəsi daxil edin', 'error');
     return;
   }
-
+  
+  // Generate QR URL - adjust base URL as needed
   const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
   const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
-
+  
   const createdAt = editingTableId
     ? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString())
     : new Date().toISOString();
-
+  
   const tableData = {
     id: editingTableId || Date.now(),
     number,
@@ -2089,14 +1881,14 @@ async function saveTable() {
     status: 'empty',
     createdAt
   };
-
+  
   if (editingTableId) {
     const index = tables.findIndex(t => Number(t.id) === Number(editingTableId));
     if (index > -1) tables[index] = { ...tables[index], ...tableData };
   } else {
     tables.unshift(tableData);
   }
-
+  
   saveLocalState();
   closeTableModal();
   renderTables();
@@ -2107,38 +1899,37 @@ async function saveTable() {
 function renderTables() {
   const grid = document.getElementById('tables-grid');
   document.getElementById('table-count').textContent = tables.length;
-
+  
   if (!tables.length) {
     grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>';
     return;
   }
-
-  grid.innerHTML = tables.map(table => {
-    const locationLabels = { inside:'İçəri', outside:'Çöl', terrace:'Terras', vip:'VIP' };
-    return `
-      <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
-        <div class="flex items-center justify-between mb-4">
-          <h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
-          <span class="status-badge bg-green-100 text-green-700">Boş</span>
-        </div>
-        <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
-          <span>${table.capacity} nəfər</span>
-          <span>${locationLabels[table.location] || 'İçəri'}</span>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
-            <i class="fas fa-qrcode"></i> QR Kod
-          </button>
-          <button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
+  
+  const locationLabels = { inside: 'İçəri', outside: 'Çöl', terrace: 'Terras', vip: 'VIP' };
+  
+  grid.innerHTML = tables.map(table => `
+    <div class="bg-white rounded-2xl p-5 shadow-sm card-hover">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
+        <span class="status-badge bg-green-100 text-green-700">Boş</span>
       </div>
-    `;
-  }).join('');
+      <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+        <span><i class="fas fa-users mr-1"></i>${table.capacity} nəfər</span>
+        <span><i class="fas fa-map-marker-alt mr-1"></i>${locationLabels[table.location] || 'İçəri'}</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
+          <i class="fas fa-qrcode mr-1"></i> QR Kod
+        </button>
+        <button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
 }
 
 function deleteTable(id) {
@@ -2154,12 +1945,13 @@ function deleteTable(id) {
 function showQRCode(tableId) {
   const table = tables.find(t => Number(t.id) === Number(tableId));
   if (!table) return;
-
+  
   currentQRTable = table;
   document.getElementById('qr-table-name').textContent = `Masa ${table.number}`;
+  
   const qrContainer = document.getElementById('qr-code-display');
   qrContainer.innerHTML = '';
-
+  
   new QRCode(qrContainer, {
     text: table.qrUrl,
     width: 200,
@@ -2168,12 +1960,14 @@ function showQRCode(tableId) {
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
-
+  
   document.getElementById('qr-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeQrModal() {
   document.getElementById('qr-modal').classList.remove('active');
+  document.body.style.overflow = '';
   currentQRTable = null;
 }
 
@@ -2194,11 +1988,11 @@ function printQR() {
     printWindow.document.write(`
       <html>
         <head><title>QR Kod - Masa ${currentQRTable.number}</title></head>
-        <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;">
           <div style="text-align:center;">
-            <h2>Masa ${currentQRTable.number}</h2>
+            <h2 style="margin-bottom:20px;">Masa ${currentQRTable.number}</h2>
             <img src="${canvas.toDataURL()}" style="width:300px;height:300px;">
-            <p>Menyuya baxmaq üçün skan edin</p>
+            <p style="margin-top:20px;color:#666;">Menyuya baxmaq üçün skan edin</p>
           </div>
         </body>
       </html>
@@ -2206,6 +2000,52 @@ function printQR() {
     printWindow.document.close();
     printWindow.print();
   }
+}
+
+// ============================================
+// RESERVATION FUNCTIONS
+// ============================================
+function renderReservations() {
+  const tbody = document.getElementById('reservations-list');
+  document.getElementById('reservation-count').textContent = reservations.length;
+  
+  if (!reservations.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Rezervasiya tapılmadı</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = reservations.map(r => {
+    const statusColors = {
+      pending: 'bg-yellow-100 text-yellow-700',
+      confirmed: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700',
+      completed: 'bg-gray-100 text-gray-700'
+    };
+    const statusLabels = {
+      pending: 'Gözləyir',
+      confirmed: 'Təsdiqləndi',
+      cancelled: 'Ləğv edildi',
+      completed: 'Tamamlandı'
+    };
+    
+    return `
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 font-medium">${escapeHtml(r.customer)}</td>
+        <td class="px-4 py-3 text-gray-600">${escapeHtml(r.phone)}</td>
+        <td class="px-4 py-3">
+          <div class="text-sm">${escapeHtml(r.date)}</div>
+          <div class="text-xs text-gray-500">${escapeHtml(r.time)}</div>
+        </td>
+        <td class="px-4 py-3">${r.guest} nəfər</td>
+        <td class="px-4 py-3">${escapeHtml(r.tableNumber || '-')}</td>
+        <td class="px-4 py-3">
+          <span class="status-badge ${statusColors[r.status] || statusColors.pending}">
+            ${statusLabels[r.status] || 'Gözləyir'}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // ============================================
@@ -2292,7 +2132,6 @@ async function handleBannerFiles(files) {
       reader.onload = (e) => resolve(e.target.result);
       reader.readAsDataURL(file);
     });
-
     const uploadedUrl = await uploadImageToDrive(base64, `banner_${Date.now()}_${i}.jpg`);
     bannerImages.push({
       id: Date.now() + i,
@@ -2301,7 +2140,6 @@ async function handleBannerFiles(files) {
       active: true
     });
   }
-
   renderBannerList();
   autoSaveSettings();
 }
@@ -2332,26 +2170,20 @@ function updateBannerTitle(id, value) {
 function renderBannerList() {
   const list = document.getElementById('banner-list');
   const empty = document.getElementById('banner-empty');
-  if (!list || !empty) return;
-
+  
   if (!bannerImages.length) {
     list.innerHTML = '';
     empty.classList.remove('hidden');
     return;
   }
-
+  
   empty.classList.add('hidden');
   list.innerHTML = bannerImages.map(item => `
     <div class="banner-card">
       <img src="${item.image}" class="banner-thumb" alt="${escapeHtml(item.title || 'banner')}">
       <div class="p-3">
-        <input
-          type="text"
-          value="${escapeHtml(item.title || '')}"
-          onchange="updateBannerTitle(${item.id}, this.value)"
-          class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3"
-          placeholder="Banner adı"
-        >
+        <input type="text" value="${escapeHtml(item.title || '')}" onchange="updateBannerTitle(${item.id}, this.value)" 
+          class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3" placeholder="Banner adı">
         <div class="flex items-center justify-between gap-2">
           <button onclick="toggleBannerStatus(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
             ${item.active !== false ? 'Aktiv' : 'Passiv'}
@@ -2367,7 +2199,7 @@ function renderBannerList() {
 
 function autoSaveSettings(triggerSync = true) {
   const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
-
+  
   settings = {
     nameAz: document.getElementById('rest-name-az')?.value || '',
     nameEn: document.getElementById('rest-name-en')?.value || '',
@@ -2385,79 +2217,73 @@ function autoSaveSettings(triggerSync = true) {
     heroTitleAz: document.getElementById('hero-title-az')?.value || '',
     heroTitleEn: document.getElementById('hero-title-en')?.value || '',
     heroImage: currentHeroImage || '',
-    headerImage: currentHeroImage || '',
     recommendedIds: JSON.stringify(recommendedIds),
     logo: currentLogo || '',
-    logoUrl: currentLogo || '',
     popupEnabled: !!document.getElementById('popup-enabled')?.checked,
     popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
     popupTitle: document.getElementById('popup-title')?.value || '',
     popupText: document.getElementById('popup-text')?.value || '',
     popupLink: document.getElementById('popup-link')?.value || '',
     popupImage: currentPopupImage || '',
-    adImage: currentPopupImage || '',
     bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
     bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
     bannerTitle: document.getElementById('banner-title')?.value || '',
     bannerImages: bannerImages,
-    bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
-    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(',')
+    bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean))
   };
-
+  
   saveLocalState();
   if (triggerSync) debouncedSync();
 }
 
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
-
-  if (document.getElementById('rest-name-az')) document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
-  if (document.getElementById('rest-name-en')) document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
-  if (document.getElementById('rest-phone')) document.getElementById('rest-phone').value = savedSettings.phone || '';
-  if (document.getElementById('rest-email')) document.getElementById('rest-email').value = savedSettings.email || '';
-  if (document.getElementById('rest-address-az')) document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
-  if (document.getElementById('rest-address-en')) document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
-  if (document.getElementById('rest-work-weekday')) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
-  if (document.getElementById('rest-work-weekend')) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
-  if (document.getElementById('social-facebook')) document.getElementById('social-facebook').value = savedSettings.facebook || '';
-  if (document.getElementById('social-instagram')) document.getElementById('social-instagram').value = savedSettings.instagram || '';
-  if (document.getElementById('social-whatsapp')) document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
-  if (document.getElementById('auto-translate-enabled')) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
-  if (document.getElementById('smart-search-enabled')) document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
-  if (document.getElementById('hero-title-az')) document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
-  if (document.getElementById('hero-title-en')) document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
-
-  if (document.getElementById('popup-enabled')) document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
-  if (document.getElementById('popup-show-once')) document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
-  if (document.getElementById('popup-title')) document.getElementById('popup-title').value = savedSettings.popupTitle || '';
-  if (document.getElementById('popup-text')) document.getElementById('popup-text').value = savedSettings.popupText || '';
-  if (document.getElementById('popup-link')) document.getElementById('popup-link').value = savedSettings.popupLink || '';
-
-  if (document.getElementById('banner-enabled')) document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
-  if (document.getElementById('banner-interval')) document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
-  if (document.getElementById('banner-title')) document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
-
+  
+  document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
+  document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
+  document.getElementById('rest-phone').value = savedSettings.phone || '';
+  document.getElementById('rest-email').value = savedSettings.email || '';
+  document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
+  document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
+  document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
+  document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
+  document.getElementById('social-facebook').value = savedSettings.facebook || '';
+  document.getElementById('social-instagram').value = savedSettings.instagram || '';
+  document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
+  document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
+  document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
+  document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
+  document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
+  document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
+  document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
+  document.getElementById('popup-title').value = savedSettings.popupTitle || '';
+  document.getElementById('popup-text').value = savedSettings.popupText || '';
+  document.getElementById('popup-link').value = savedSettings.popupLink || '';
+  document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
+  document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
+  document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
+  
   if (savedSettings.logo) {
     currentLogo = savedSettings.logo;
     document.getElementById('logo-image').src = currentLogo;
     document.getElementById('logo-image').classList.remove('hidden');
     document.getElementById('logo-placeholder').classList.add('hidden');
   }
-
+  
   if (savedSettings.heroImage) {
     currentHeroImage = savedSettings.heroImage;
     document.getElementById('hero-image-preview').src = currentHeroImage;
     document.getElementById('hero-image-preview').classList.remove('hidden');
     document.getElementById('hero-image-placeholder').classList.add('hidden');
   }
-
+  
   if (savedSettings.popupImage) {
     currentPopupImage = savedSettings.popupImage;
     document.getElementById('popup-image-preview').src = currentPopupImage;
     document.getElementById('popup-image-preview').classList.remove('hidden');
     document.getElementById('popup-image-placeholder').classList.add('hidden');
   }
-
+  
   bannerImages = Array.isArray(savedSettings.bannerImages) ? savedSettings.bannerImages : [];
   renderBannerList();
 }
@@ -2470,21 +2296,21 @@ function updateStats() {
   document.getElementById('stat-categories').textContent = categories.length;
   document.getElementById('stat-tables').textContent = tables.length;
   document.getElementById('stat-orders').textContent = orders.length;
-
+  
   const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
   document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + '₼';
 }
 
 function updateDashboard() {
   if (!weeklyChart) initCharts();
+  updateStats();
 }
 
 function initCharts() {
   const ctx = document.getElementById('weeklyOrdersChart');
   if (!ctx) return;
-
   if (weeklyChart) weeklyChart.destroy();
-
+  
   weeklyChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -2501,10 +2327,10 @@ function initCharts() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display:false } },
+      plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero:true },
-        x: { grid: { display:false } }
+        y: { beginAtZero: true },
+        x: { grid: { display: false } }
       }
     }
   });
@@ -2543,9 +2369,19 @@ document.addEventListener('change', function(e) {
 window.onclick = function(event) {
   if (event.target.classList.contains('modal')) {
     event.target.classList.remove('active');
+    document.body.style.overflow = '';
   }
 };
-</script>
 
+// Close modals on escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal.active').forEach(modal => {
+      modal.classList.remove('active');
+    });
+    document.body.style.overflow = '';
+  }
+});
+</script>
 </body>
 </html>
