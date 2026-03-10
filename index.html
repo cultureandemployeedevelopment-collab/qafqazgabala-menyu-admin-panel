@@ -242,6 +242,9 @@
           <p id="page-subtitle" class="text-sm text-gray-500">Restoranınızın ümumi vəziyyəti</p>
         </div>
         <div class="flex items-center gap-4">
+          <button onclick="manualSync()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
+            <i class="fas fa-sync-alt"></i> Sinxronizasiya
+          </button>
           <div id="sync-status-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2">
             <i class="fas fa-check-circle"></i>
             <span>Sinxronizasiya edildi</span>
@@ -914,13 +917,19 @@
 </div>
 
 <script>
+// ============================================
+// CONFIGURATION - UPDATE THIS URL
+// ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyfKniarW6gTfylpEXCv2_80YLZNbN6DLA_EV6KVwUytSi6Aj6Pj45MfH6TFhvcgGRV/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPMJA52jhbfcYTWweDi5qDIHXHyxsbjdEC_eaEtW2Ui5e-ItZkI703o_hNfFfzNGI1HQ/exec',
   DRIVE_FOLDER_ID: '18tjYhT_35XL0Vy5mDRJTP9FS_P_ctNN_',
   AUTO_SYNC: true,
-  SYNC_DELAY: 400
+  SYNC_DELAY: 1000
 };
 
+// ============================================
+// STATE MANAGEMENT
+// ============================================
 let categories = JSON.parse(localStorage.getItem('categories') || '[]');
 let products = JSON.parse(localStorage.getItem('products') || '[]');
 let orders = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -944,6 +953,9 @@ let isProductAutoTranslating = false;
 let categoryTranslateTimer = null;
 let weeklyChart = null;
 
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -1018,6 +1030,9 @@ function normalizeServerPayload(data) {
   };
 }
 
+// ============================================
+// API FUNCTIONS
+// ============================================
 async function translateViaAppsScript(text, source, target) {
   if (!text || !text.trim()) return '';
   try {
@@ -1031,59 +1046,6 @@ async function translateViaAppsScript(text, source, target) {
     console.error(e);
     return '';
   }
-}
-
-function handleProductFieldInput(fieldType, lang, value) {
-  const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
-  if (!autoTranslateEnabled || isProductAutoTranslating) return;
-
-  clearTimeout(productTranslateTimer);
-
-  productTranslateTimer = setTimeout(async () => {
-    const cleanValue = (value || '').trim();
-
-    const targetIdMap = {
-      name: { az: 'prod-name-en', en: 'prod-name-az' },
-      desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
-    };
-
-    const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
-    if (!targetElement) return;
-
-    if (!cleanValue) {
-      isProductAutoTranslating = true;
-      targetElement.value = '';
-      isProductAutoTranslating = false;
-      return;
-    }
-
-    isProductAutoTranslating = true;
-    const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
-    if (translatedText) targetElement.value = translatedText;
-    isProductAutoTranslating = false;
-  }, 350);
-}
-
-function translateCategoryName() {
-  const azText = document.getElementById('cat-name-az').value.trim();
-  const box = document.getElementById('cat-translation-box');
-
-  clearTimeout(categoryTranslateTimer);
-
-  if (!azText) {
-    box.classList.add('hidden');
-    return;
-  }
-
-  categoryTranslateTimer = setTimeout(async () => {
-    const translated = await translateViaAppsScript(azText, 'az', 'en');
-    if (translated) {
-      box.classList.remove('hidden');
-      document.getElementById('cat-translated-text').textContent = translated;
-    } else {
-      box.classList.add('hidden');
-    }
-  }, 300);
 }
 
 async function uploadImageToDrive(base64Image, fileName) {
@@ -1147,56 +1109,44 @@ async function parseAppsScriptResponse(response) {
 
 async function postAppsScript(action, payload = {}) {
   const jsonPayload = { action, ...payload };
-  const formPayload = new URLSearchParams({
-    action,
-    ...Object.fromEntries(Object.entries(payload).map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]))
-  });
-
-  const attempts = [
-    {
-      url: CONFIG.GAS_URL,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jsonPayload)
-      }
-    },
-    {
-      url: `${CONFIG.GAS_URL}?action=${encodeURIComponent(action)}`,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
-    },
-    {
-      url: CONFIG.GAS_URL,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: formPayload.toString()
-      }
-    }
-  ];
-
-  let lastError = null;
-  for (const attempt of attempts) {
-    try {
-      const response = await fetch(attempt.url, attempt.init);
-      const result = await parseAppsScriptResponse(response);
-      if (result?.success) return result;
-      lastError = new Error(result?.error || 'Unknown Apps Script error');
-    } catch (error) {
-      lastError = error;
-    }
+  
+  // Try JSON first
+  try {
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jsonPayload)
+    });
+    return await parseAppsScriptResponse(response);
+  } catch (jsonError) {
+    console.log('JSON request failed, trying form data...', jsonError);
   }
 
-  throw lastError || new Error('Apps Script request failed');
+  // Fallback to form data
+  const formPayload = new URLSearchParams();
+  formPayload.append('action', action);
+  
+  Object.entries(payload).forEach(([key, value]) => {
+    if (typeof value === 'object') {
+      formPayload.append(key, JSON.stringify(value));
+    } else {
+      formPayload.append(key, String(value));
+    }
+  });
+
+  const response = await fetch(CONFIG.GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formPayload.toString()
+  });
+  
+  return await parseAppsScriptResponse(response);
 }
 
 function buildSyncPayload() {
   const cleanSettings = { ...settings };
 
+  // Remove base64 data from settings
   if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
   if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
   if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
@@ -1244,68 +1194,36 @@ async function syncToGoogleSheets(showToast = true) {
     if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
 
     const payload = buildSyncPayload();
-    const syncAttempts = [
-      { action: 'syncData', body: { data: payload } },
-      { action: 'syncData', body: payload },
-      { action: 'saveMenu', body: { data: payload } },
-      { action: 'saveMenu', body: payload },
-      { action: 'updateMenu', body: { data: payload } },
-      { action: 'updateMenu', body: payload }
-    ];
-
-    let syncResult = null;
+    
+    // Try multiple action names for compatibility
+    const actions = ['syncData', 'saveMenu', 'updateMenu'];
     let lastError = null;
 
-    for (const attempt of syncAttempts) {
+    for (const action of actions) {
       try {
-        const result = await postAppsScript(attempt.action, attempt.body);
+        const result = await postAppsScript(action, { data: payload });
         if (result?.success) {
-          syncResult = result;
-          break;
+          if (showToast) {
+            showSyncIndicator('Sinxronizasiya edildi!', 'success');
+            showSyncBadge();
+            setTimeout(hideSyncIndicator, 2200);
+          }
+          return result;
         }
-        lastError = new Error(result?.error || 'Sync error');
       } catch (error) {
         lastError = error;
+        console.log(`Action ${action} failed:`, error);
       }
     }
 
-    if (!syncResult) {
-      // Last-resort fire-and-forget request for strict CORS environments
-      try {
-        const fallbackBody = new URLSearchParams({
-          action: 'syncData',
-          data: JSON.stringify(payload)
-        }).toString();
-
-        await fetch(CONFIG.GAS_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-          body: fallbackBody,
-          keepalive: true
-        });
-
-        syncResult = { success: true, fallback: true };
-      } catch (fallbackError) {
-        lastError = fallbackError;
-      }
-    }
-
-    if (!syncResult) {
-      throw lastError || new Error('Sync error');
-    }
-
-    if (showToast) {
-      showSyncIndicator('Sinxronizasiya edildi!', 'success');
-      showSyncBadge();
-      setTimeout(hideSyncIndicator, 2200);
-    }
+    throw lastError || new Error('All sync actions failed');
   } catch (error) {
     console.error('Sync error:', error);
     if (showToast) {
       showSyncIndicator('Sinxronizasiya xətası!', 'error');
       setTimeout(hideSyncIndicator, 2400);
     }
+    throw error;
   }
 }
 
@@ -1322,9 +1240,19 @@ async function immediateSync() {
   await syncToGoogleSheets(true);
 }
 
+async function manualSync() {
+  await immediateSync();
+}
+
 async function loadInitialDataFromServer() {
   try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { cache: 'no-store' });
+    showSyncIndicator('Məlumatlar yüklənir...', 'loading');
+    
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { 
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    });
+    
     const raw = await response.json();
     const data = normalizeServerPayload(raw);
 
@@ -1341,11 +1269,21 @@ async function loadInitialDataFromServer() {
     bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
 
     saveLocalState();
+    hideSyncIndicator();
+    
+    // Refresh UI
+    initApp();
   } catch (e) {
     console.error('Initial load error:', e);
+    hideSyncIndicator();
+    // Use local data if server fails
+    initApp();
   }
 }
 
+// ============================================
+// AUTH FUNCTIONS
+// ============================================
 function togglePassword() {
   const input = document.getElementById('password');
   const icon = document.getElementById('eye-icon');
@@ -1373,15 +1311,8 @@ async function handleLogin(e) {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
 
-  // Do not block panel entry if remote data load is slow or fails.
-  initApp();
-
-  try {
-    await loadInitialDataFromServer();
-    initApp();
-  } catch (error) {
-    console.error('Login bootstrap error:', error);
-  }
+  // Load data from server
+  await loadInitialDataFromServer();
 }
 
 function logout() {
@@ -1391,6 +1322,9 @@ function logout() {
   document.getElementById('login-error').classList.add('hidden');
 }
 
+// ============================================
+// NAVIGATION
+// ============================================
 function showPage(pageName) {
   document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
   const selected = document.getElementById('page-' + pageName);
@@ -1433,6 +1367,9 @@ function showPage(pageName) {
   }
 }
 
+// ============================================
+// CATEGORY FUNCTIONS
+// ============================================
 function openCategoryModal(categoryId = null) {
   editingCategoryId = categoryId;
   document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
@@ -1564,7 +1501,31 @@ function updateCategoryFilter() {
     });
 }
 
+function translateCategoryName() {
+  const azText = document.getElementById('cat-name-az').value.trim();
+  const box = document.getElementById('cat-translation-box');
+
+  clearTimeout(categoryTranslateTimer);
+
+  if (!azText) {
+    box.classList.add('hidden');
+    return;
+  }
+
+  categoryTranslateTimer = setTimeout(async () => {
+    const translated = await translateViaAppsScript(azText, 'az', 'en');
+    if (translated) {
+      box.classList.remove('hidden');
+      document.getElementById('cat-translated-text').textContent = translated;
+    } else {
+      box.classList.add('hidden');
+    }
+  }, 300);
+}
+
+// ============================================
 // VIDEO FUNCTIONS
+// ============================================
 async function handleVideoFileInput(input) {
   const file = input?.files?.[0];
   if (!file) return;
@@ -1592,6 +1553,7 @@ async function handleVideoFileInput(input) {
       clearVideo();
       return;
     }
+    
     document.getElementById('prod-video-url').value = uploadedUrl;
     currentProductVideo = uploadedUrl;
     updateVideoPreview();
@@ -1637,6 +1599,40 @@ function closeVideoModal() {
   const player = document.getElementById('modal-video-player');
   player.pause();
   modal.classList.remove('active');
+}
+
+// ============================================
+// PRODUCT FUNCTIONS
+// ============================================
+function handleProductFieldInput(fieldType, lang, value) {
+  const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
+  if (!autoTranslateEnabled || isProductAutoTranslating) return;
+
+  clearTimeout(productTranslateTimer);
+
+  productTranslateTimer = setTimeout(async () => {
+    const cleanValue = (value || '').trim();
+
+    const targetIdMap = {
+      name: { az: 'prod-name-en', en: 'prod-name-az' },
+      desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
+    };
+
+    const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
+    if (!targetElement) return;
+
+    if (!cleanValue) {
+      isProductAutoTranslating = true;
+      targetElement.value = '';
+      isProductAutoTranslating = false;
+      return;
+    }
+
+    isProductAutoTranslating = true;
+    const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
+    if (translatedText) targetElement.value = translatedText;
+    isProductAutoTranslating = false;
+  }, 350);
 }
 
 function openProductModal(productId = null) {
@@ -1691,7 +1687,6 @@ function openProductModal(productId = null) {
       document.getElementById('prod-recommended').checked = !!product.recommended;
       document.getElementById('prod-available').checked = product.available !== false;
 
-      // Load video if exists
       if (product.videoUrl) {
         document.getElementById('prod-video-url').value = product.videoUrl;
         currentProductVideo = product.videoUrl;
@@ -1888,7 +1883,6 @@ function renderProducts() {
 
     let imagesHtml = '';
     if (product.images && product.images.length > 0) {
-      // If product has video, show video thumbnail first
       if (product.videoUrl) {
         imagesHtml += `
           <div class="video-thumbnail relative mb-2 cursor-pointer" onclick="event.stopPropagation(); openVideoModal('${product.videoUrl.replace(/'/g, "\\'")}')">
@@ -1903,7 +1897,6 @@ function renderProducts() {
             </div>
           </div>
         `;
-        // Show remaining images
         if (product.images.length > 1) {
           imagesHtml += '<div class="grid grid-cols-2 gap-2">';
           product.images.slice(1).forEach((img, idx) => {
@@ -1992,6 +1985,9 @@ function deleteProduct(id) {
   }
 }
 
+// ============================================
+// TABLE FUNCTIONS
+// ============================================
 function openTableModal(tableId = null) {
   editingTableId = tableId;
   document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
@@ -2161,6 +2157,9 @@ function printQR() {
   }
 }
 
+// ============================================
+// SETTINGS FUNCTIONS
+// ============================================
 async function handleLogoUpload(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
@@ -2407,6 +2406,9 @@ function loadSettings() {
   renderBannerList();
 }
 
+// ============================================
+// DASHBOARD FUNCTIONS
+// ============================================
 function updateStats() {
   document.getElementById('stat-products').textContent = products.length;
   document.getElementById('stat-categories').textContent = categories.length;
@@ -2463,6 +2465,9 @@ function initApp() {
   loadSettings();
 }
 
+// ============================================
+// EVENT LISTENERS
+// ============================================
 document.addEventListener('change', function(e) {
   if (e.target && e.target.id === 'prod-available') {
     const label = document.getElementById('availability-label');
