@@ -1167,17 +1167,24 @@ throw new Error(raw || `HTTP ${response.status}`);
 
 async function postAppsScript(action, payload = {}) {
 const jsonPayload = { action, ...payload };
+// Use Content-Type: text/plain to avoid CORS preflight (OPTIONS) requests.
+// GAS web apps do not officially support doOptions, so preflight blocks the POST.
+// text/plain is a "simple" CORS request that requires no preflight, and
+// GAS's parsePostBody_() falls through to JSON.parse() for unknown content types,
+// so the JSON body is still parsed correctly on the server side.
 try {
 const response = await fetch(CONFIG.GAS_URL, {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: { 'Content-Type': 'text/plain' },
 body: JSON.stringify(jsonPayload)
 });
 return await parseAppsScriptResponse(response);
-} catch (jsonError) {
-console.log('JSON request failed, trying form data...', jsonError);
+} catch (err) {
+console.log('text/plain POST failed, trying form-encoded fallback...', err);
 }
 
+// Fallback: application/x-www-form-urlencoded (also a simple CORS request, no preflight).
+// URLSearchParams correctly percent-encodes base64 characters (+, /, =).
 const formPayload = new URLSearchParams();
 formPayload.append('action', action);
 Object.entries(payload).forEach(([key, value]) => {
