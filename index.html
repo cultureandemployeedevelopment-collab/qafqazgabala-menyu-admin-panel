@@ -961,11 +961,21 @@ Brauzeriniz video tag-ni dəstəkləmir.
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ============================================
-// CONFIGURATION
+// CONFIGURATION - BUNU DƏYİŞDİRİN
 // ============================================
 const CONFIG = {
+  // Google Apps Script Web App URL-nizi bura yazın
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxy5SCDM5C7hoyxSZtFbi5i8gO9_HCLATm0OkK-K6nCcDqeBJNUGZlyHVCmtFJuK75nVg/exec',
+  
+  // Google Sheet ID (Apps Script ilə eyni olmalıdır)
+  SHEET_ID: '1_c8JLGJT_hFNiSLpmlYsBLM-bbdI_1WmsWAxpealV_U',
+  
+  // Google Drive Folder ID şəkillər üçün
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
+  
+  // Fallback mode
+  FALLBACK_MODE: false,
+  
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
 };
@@ -1042,7 +1052,6 @@ function normalizeDriveFileUrl(url) {
   if (!trimmed) return '';
   const idMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (idMatch && idMatch[1]) {
-    // thumbnail formatı <img> tag-da işləyir, uc?export=view bloklanır
     return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`;
   }
   return trimmed;
@@ -1054,7 +1063,6 @@ function normalizeDriveFileUrl(url) {
 function normalizeProduct(product = {}) {
   const normalized = { ...(product || {}) };
 
-  // Helper: array of mixed items -> plain string URL array
   function flattenImages(raw) {
     if (!Array.isArray(raw)) return [];
     return raw.map(img => {
@@ -1128,7 +1136,6 @@ async function uploadImageToDrive(base64Image, fileName) {
     if (result.success) {
       showSyncIndicator('Şəkil yükləndi!', 'success');
       setTimeout(hideSyncIndicator, 1200);
-      // FIX: directUrl istifadə et - bu Google Sheets-də düzgün göstərilir
       return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
     }
     throw new Error(result.error || 'Upload error');
@@ -1210,11 +1217,8 @@ function buildSyncPayload() {
   const cleanProducts = products.map(product => {
     const normalized = normalizeProduct(product);
 
-    // FIX: həmişə sadə string array istifadə et
     let images = Array.isArray(normalized.images) ? normalized.images : [];
-    // data: URL-ləri filtrə et (artıq Drive-a yüklənməlidir)
     images = images.filter(img => typeof img === 'string' && !img.startsWith('data:') && img.trim() !== '');
-    // Drive URL-lərini normalize et
     images = images.map(normalizeDriveFileUrl).filter(Boolean);
 
     const videoUrl = typeof normalized.videoUrl === 'string' && !normalized.videoUrl.startsWith('data:')
@@ -1224,7 +1228,7 @@ function buildSyncPayload() {
     return {
       ...normalized,
       images: images,
-      imagesJson: JSON.stringify(images),  // sadə string array: ["url1","url2"]
+      imagesJson: JSON.stringify(images),
       imageUrl: images[0] || '',
       videoUrl: videoUrl
     };
@@ -1392,7 +1396,6 @@ async function saveCategory() {
   const icon = document.getElementById('cat-icon').value;
   const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
   if (!nameAz) { alert('Kateqoriya adı daxil edin'); return; }
-  // nameEn yoxdursa avtomatik tərcümə et
   if (!nameEn) {
     showSyncIndicator('Tərcümə edilir...', 'loading');
     nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz;
@@ -1564,7 +1567,6 @@ function openProductModal(productId = null) {
         document.getElementById('availability-label').classList.remove('text-green-600');
         document.getElementById('availability-label').classList.add('text-red-600');
       }
-      // FIX: normalize images before showing in modal
       const normalized = normalizeProduct(product);
       currentProductImages = [...normalized.images];
       renderImagePreview();
@@ -1641,12 +1643,10 @@ async function saveProduct() {
     document.getElementById('progress-fill').style.width = percent + '%';
 
     if (typeof img === 'string' && img.startsWith('data:')) {
-      // Yeni şəkil - Drive-a yüklə, sadə URL al
       const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
       if (!url) { progressDiv.classList.add('hidden'); alert('Şəkil yüklənmədi. Yenidən cəhd edin.'); return; }
-      uploadedImages.push(url);  // sadə string URL
+      uploadedImages.push(url);
     } else if (typeof img === 'string' && img.trim() !== '') {
-      // Artıq Drive URL-i var
       uploadedImages.push(normalizeDriveFileUrl(img));
     }
   }
@@ -1665,8 +1665,8 @@ async function saveProduct() {
     nameAz, nameEn, descAz, descEn, categoryId,
     categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
     price,
-    images: uploadedImages,           // sadə string array: ["url1","url2"]
-    imagesJson: JSON.stringify(uploadedImages),  // şeetdə saxlanacaq format
+    images: uploadedImages,
+    imagesJson: JSON.stringify(uploadedImages),
     imageUrl: uploadedImages[0] || '',
     videoUrl: videoUrl || '',
     specs: { volume: document.getElementById('prod-volume').value.trim(), time: document.getElementById('prod-time').value.trim() },
@@ -1706,7 +1706,6 @@ function renderProducts() {
   document.getElementById('product-count-header').textContent = filtered.length;
   if (!filtered.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>'; return; }
   grid.innerHTML = filtered.map(product => {
-    // FIX: normalize before rendering so {url:...} objects are handled
     const normalized = normalizeProduct(product);
     const category = categories.find(c => Number(c.id) === Number(product.categoryId));
     let imagesHtml = '';
