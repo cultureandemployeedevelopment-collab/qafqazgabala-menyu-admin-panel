@@ -1054,6 +1054,17 @@ return fallback;
 }
 }
 
+function normalizeDriveFileUrl(url) {
+if (typeof url !== 'string') return '';
+const trimmed = url.trim();
+if (!trimmed) return '';
+const idMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+if (idMatch && idMatch[1]) {
+return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+}
+return trimmed;
+}
+
 function normalizeProduct(product = {}) {
 const normalized = { ...(product || {}) };
 if (!Array.isArray(normalized.images)) {
@@ -1123,7 +1134,7 @@ folderId: CONFIG.DRIVE_FOLDER_ID
 if (result.success) {
 showSyncIndicator('Şəkil yükləndi!', 'success');
 setTimeout(hideSyncIndicator, 1200);
-return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
+return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
 }
 throw new Error(result.error || 'Upload error');
 } catch (error) {
@@ -1145,7 +1156,7 @@ folderId: CONFIG.DRIVE_FOLDER_ID
 if (result.success) {
 showSyncIndicator('Video yükləndi!', 'success');
 setTimeout(hideSyncIndicator, 1200);
-return result.directUrl || result.thumbnailUrl || result.viewUrl || null;
+return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
 }
 throw new Error(result.error || 'Video upload error');
 } catch (error) {
@@ -1221,14 +1232,19 @@ return normalized;
 
 const cleanProducts = products.map(product => {
 const normalized = normalizeProduct(product);
+if ((!Array.isArray(normalized.images) || normalized.images.length === 0) && typeof normalized.imagesJson === 'string') {
+normalized.images = parsePossibleJson(normalized.imagesJson, []);
+}
 if (Array.isArray(normalized.images)) {
 normalized.images = normalized.images.filter(img => !(typeof img === 'string' && img.startsWith('data:')));
 } else {
 normalized.images = [];
 }
+normalized.images = normalized.images.map(normalizeDriveFileUrl).filter(Boolean);
 if (typeof normalized.videoUrl === 'string' && normalized.videoUrl.startsWith('data:')) {
 normalized.videoUrl = '';
 }
+normalized.videoUrl = normalizeDriveFileUrl(normalized.videoUrl || '');
 normalized.imagesJson = JSON.stringify(normalized.images);
 normalized.imageUrl = normalized.images[0] || '';
 return normalized;
@@ -1826,11 +1842,16 @@ document.getElementById('upload-percent').textContent = percent + '%';
 document.getElementById('progress-fill').style.width = percent + '%';
 if (typeof img === 'string' && img.startsWith('data:')) {
 const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
-uploadedImages.push(url || img);
+if (!url) {
+throw new Error('Şəkil Drive-a yüklənmədi. Yenidən cəhd edin.');
+}
+uploadedImages.push(url);
 } else {
-uploadedImages.push(img);
+uploadedImages.push(normalizeDriveFileUrl(img));
 }
 }
+
+currentProductImages = [...uploadedImages];
 
 progressDiv.classList.add('hidden');
 document.getElementById('upload-percent').textContent = '0%';
