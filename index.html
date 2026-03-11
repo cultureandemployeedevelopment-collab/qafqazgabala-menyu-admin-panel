@@ -1078,7 +1078,15 @@ normalized.images = [normalized.imageUrl.trim()];
 normalized.images = [];
 }
 }
-normalized.images = normalized.images.filter(img => typeof img === 'string' && img.trim());
+normalized.images = normalized.images.map(img => {
+  if (typeof img === 'string') return img.trim() || null;
+  if (img && typeof img === 'object') {
+    // Handle {url:'...'} objects stored by server's attachProductImage_
+    const src = String(img.url || img.image || img.src || img.directUrl || '').trim();
+    return src || null;
+  }
+  return null;
+}).filter(Boolean);
 normalized.imagesJson = JSON.stringify(normalized.images);
 normalized.imageUrl = normalized.imageUrl || normalized.images[0] || '';
 if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
@@ -1123,14 +1131,17 @@ return '';
 }
 }
 
-async function uploadImageToDrive(base64Image, fileName) {
+async function uploadImageToDrive(base64Image, fileName, productId = '') {
 try {
 showSyncIndicator('Şəkil yüklənir...', 'loading');
-const result = await postAppsScript('uploadImage', {
+const uploadPayload = {
 image: base64Image,
 fileName: fileName || `image_${Date.now()}.jpg`,
 folderId: CONFIG.DRIVE_FOLDER_ID
-});
+};
+// Only attach to sheet when productId is provided (non-empty) — new products have no row yet
+if (productId) uploadPayload.productId = String(productId);
+const result = await postAppsScript('uploadImage', uploadPayload);
 if (result.success) {
 showSyncIndicator('Şəkil yükləndi!', 'success');
 setTimeout(hideSyncIndicator, 1200);
@@ -1841,7 +1852,11 @@ const percent = Math.round(((i + 1) / totalImages) * 100);
 document.getElementById('upload-percent').textContent = percent + '%';
 document.getElementById('progress-fill').style.width = percent + '%';
 if (typeof img === 'string' && img.startsWith('data:')) {
-const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
+const url = await uploadImageToDrive(
+img,
+`product_${Date.now()}_${i}.jpg`,
+editingProductId ? String(editingProductId) : ''
+);
 if (!url) {
 throw new Error('Şəkil Drive-a yüklənmədi. Yenidən cəhd edin.');
 }
