@@ -964,17 +964,17 @@ Brauzeriniz video tag-ni dəstəkləmir.
 
 <script>
 // ============================================
-// CONFIGURATION - UPDATE THIS URL
+// CONFIGURATION
 // ============================================
 const CONFIG = {
-GAS_URL: 'https://script.google.com/macros/s/AKfycbyBpZLInPXnE3EAIurE5q4z_PMP7xEXzn37YqsbQEqMFXRGDzLrfTAVCTGX87C2K6vQxQ/exec',
-DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
-AUTO_SYNC: true,
-SYNC_DELAY: 1000
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxy7RDGXEe3_HOCag5VBI-lF9ABEm-df-04nFsafoDVbATvTCXxDudiMVkps9D6iTS1yg/exec',
+  DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
+  AUTO_SYNC: true,
+  SYNC_DELAY: 1000
 };
 
 // ============================================
-// STATE MANAGEMENT
+// STATE
 // ============================================
 let categories = JSON.parse(localStorage.getItem('categories') || '[]');
 let products = JSON.parse(localStorage.getItem('products') || '[]');
@@ -1003,1675 +1003,1166 @@ let weeklyChart = null;
 // UTILITY FUNCTIONS
 // ============================================
 function escapeHtml(value = '') {
-return String(value)
-.replaceAll('&', '&amp;')
-.replaceAll('<', '&lt;')
-.replaceAll('>', '&gt;')
-.replaceAll('"', '&quot;')
-.replaceAll("'", '&#039;');
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function showSyncIndicator(text, type) {
-const indicator = document.getElementById('sync-indicator');
-const textEl = document.getElementById('sync-text');
-indicator.className = `sync-indicator sync-${type}`;
-textEl.textContent = text;
-indicator.classList.remove('hidden');
+  const indicator = document.getElementById('sync-indicator');
+  const textEl = document.getElementById('sync-text');
+  indicator.className = `sync-indicator sync-${type}`;
+  textEl.textContent = text;
+  indicator.classList.remove('hidden');
 }
-
-function hideSyncIndicator() {
-document.getElementById('sync-indicator').classList.add('hidden');
-}
-
+function hideSyncIndicator() { document.getElementById('sync-indicator').classList.add('hidden'); }
 function showSyncBadge() {
-const badge = document.getElementById('sync-status-badge');
-if (!badge) return;
-badge.classList.remove('hidden');
-setTimeout(() => badge.classList.add('hidden'), 2500);
+  const badge = document.getElementById('sync-status-badge');
+  if (!badge) return;
+  badge.classList.remove('hidden');
+  setTimeout(() => badge.classList.add('hidden'), 2500);
 }
-
-function safeNumber(value, fallback = 0) {
-const n = Number(value);
-return isNaN(n) ? fallback : n;
-}
-
+function safeNumber(value, fallback = 0) { const n = Number(value); return isNaN(n) ? fallback : n; }
 function saveLocalState() {
-localStorage.setItem('categories', JSON.stringify(categories));
-localStorage.setItem('products', JSON.stringify(products));
-localStorage.setItem('orders', JSON.stringify(orders));
-localStorage.setItem('tables', JSON.stringify(tables));
-localStorage.setItem('reservations', JSON.stringify(reservations));
-localStorage.setItem('settings', JSON.stringify(settings));
+  localStorage.setItem('categories', JSON.stringify(categories));
+  localStorage.setItem('products', JSON.stringify(products));
+  localStorage.setItem('orders', JSON.stringify(orders));
+  localStorage.setItem('tables', JSON.stringify(tables));
+  localStorage.setItem('reservations', JSON.stringify(reservations));
+  localStorage.setItem('settings', JSON.stringify(settings));
 }
-
 function parsePossibleJson(value, fallback) {
-if (value == null || value === '') return fallback;
-if (typeof value === 'object') return value;
-try {
-return JSON.parse(value);
-} catch {
-return fallback;
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch { return fallback; }
 }
-}
-
 function normalizeDriveFileUrl(url) {
-if (typeof url !== 'string') return '';
-const trimmed = url.trim();
-if (!trimmed) return '';
-const idMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-if (idMatch && idMatch[1]) {
-return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-}
-return trimmed;
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  const idMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+  return trimmed;
 }
 
+// ============================================
+// FIX 1: normalizeProduct - handle both string[] and {url:...}[] formats
+// ============================================
 function normalizeProduct(product = {}) {
-const normalized = { ...(product || {}) };
-if (!Array.isArray(normalized.images)) {
-if (typeof normalized.imagesJson === 'string') {
-normalized.images = parsePossibleJson(normalized.imagesJson, []);
-} else if (Array.isArray(normalized.imagesJson)) {
-normalized.images = normalized.imagesJson;
-} else if (typeof normalized.imageUrl === 'string' && normalized.imageUrl.trim()) {
-normalized.images = [normalized.imageUrl.trim()];
-} else {
-normalized.images = [];
-}
-}
-normalized.images = normalized.images.map(img => {
-  if (typeof img === 'string') return img.trim() || null;
-  if (img && typeof img === 'object') {
-    // Handle {url:'...'} objects stored by server's attachProductImage_
-    const src = String(img.url || img.image || img.src || img.directUrl || '').trim();
-    return src || null;
+  const normalized = { ...(product || {}) };
+
+  // Helper: array of mixed items -> plain string URL array
+  function flattenImages(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(img => {
+      if (typeof img === 'string') return img.trim();
+      if (img && typeof img === 'object') {
+        return (img.url || img.image || img.directUrl || img.thumbnailUrl || '').trim();
+      }
+      return '';
+    }).filter(url => url !== '');
   }
-  return null;
-}).filter(Boolean);
-normalized.imagesJson = JSON.stringify(normalized.images);
-normalized.imageUrl = normalized.imageUrl || normalized.images[0] || '';
-if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
-if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
-return normalized;
+
+  if (!Array.isArray(normalized.images) || normalized.images.length === 0) {
+    let parsed = [];
+    if (typeof normalized.imagesJson === 'string' && normalized.imagesJson.trim()) {
+      parsed = parsePossibleJson(normalized.imagesJson, []);
+    } else if (Array.isArray(normalized.imagesJson)) {
+      parsed = normalized.imagesJson;
+    } else if (typeof normalized.imageUrl === 'string' && normalized.imageUrl.trim()) {
+      parsed = [normalized.imageUrl.trim()];
+    }
+    normalized.images = flattenImages(Array.isArray(parsed) ? parsed : []);
+  } else {
+    normalized.images = flattenImages(normalized.images);
+  }
+
+  normalized.imagesJson = JSON.stringify(normalized.images);
+  normalized.imageUrl = normalized.images[0] || normalized.imageUrl || '';
+  if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
+  if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
+  return normalized;
 }
 
 function normalizeServerPayload(data) {
-const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
-const normalizedSettings = src.settings && typeof src.settings === 'object' ? src.settings : {};
-if (typeof normalizedSettings.bannerImages === 'string') {
-normalizedSettings.bannerImages = parsePossibleJson(normalizedSettings.bannerImages, []);
-}
-if (!Array.isArray(normalizedSettings.bannerImages)) {
-normalizedSettings.bannerImages = [];
-}
-return {
-categories: Array.isArray(src.categories) ? src.categories : [],
-products: Array.isArray(src.products) ? src.products.map(normalizeProduct) : [],
-orders: Array.isArray(src.orders) ? src.orders : [],
-tables: Array.isArray(src.tables) ? src.tables : [],
-reservations: Array.isArray(src.reservations) ? src.reservations : [],
-settings: normalizedSettings
-};
+  const src = data?.data && typeof data.data === 'object' ? data.data : data || {};
+  const normalizedSettings = src.settings && typeof src.settings === 'object' ? src.settings : {};
+  if (typeof normalizedSettings.bannerImages === 'string') {
+    normalizedSettings.bannerImages = parsePossibleJson(normalizedSettings.bannerImages, []);
+  }
+  if (!Array.isArray(normalizedSettings.bannerImages)) normalizedSettings.bannerImages = [];
+  return {
+    categories: Array.isArray(src.categories) ? src.categories : [],
+    products: Array.isArray(src.products) ? src.products.map(normalizeProduct) : [],
+    orders: Array.isArray(src.orders) ? src.orders : [],
+    tables: Array.isArray(src.tables) ? src.tables : [],
+    reservations: Array.isArray(src.reservations) ? src.reservations : [],
+    settings: normalizedSettings
+  };
 }
 
 // ============================================
 // API FUNCTIONS
 // ============================================
 async function translateViaAppsScript(text, source, target) {
-if (!text || !text.trim()) return '';
-try {
-const response = await fetch(
-`${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`
-);
-const data = await response.json();
-if (data.success) return data.translated || '';
-return '';
-} catch (e) {
-console.error(e);
-return '';
-}
+  if (!text || !text.trim()) return '';
+  try {
+    const response = await fetch(`${CONFIG.GAS_URL}?action=translate&text=${encodeURIComponent(text)}&source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`);
+    const data = await response.json();
+    if (data.success) return data.translated || '';
+    return '';
+  } catch (e) { return ''; }
 }
 
-async function uploadImageToDrive(base64Image, fileName, productId = '') {
-try {
-showSyncIndicator('Şəkil yüklənir...', 'loading');
-const uploadPayload = {
-image: base64Image,
-fileName: fileName || `image_${Date.now()}.jpg`,
-folderId: CONFIG.DRIVE_FOLDER_ID
-};
-// Only attach to sheet when productId is provided (non-empty) — new products have no row yet
-if (productId) uploadPayload.productId = String(productId);
-const result = await postAppsScript('uploadImage', uploadPayload);
-if (result.success) {
-showSyncIndicator('Şəkil yükləndi!', 'success');
-setTimeout(hideSyncIndicator, 1200);
-return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
-}
-throw new Error(result.error || 'Upload error');
-} catch (error) {
-console.error('Upload error:', error);
-showSyncIndicator('Şəkil yüklənmədi!', 'error');
-setTimeout(hideSyncIndicator, 2200);
-return null;
-}
+async function uploadImageToDrive(base64Image, fileName) {
+  try {
+    showSyncIndicator('Şəkil yüklənir...', 'loading');
+    const result = await postAppsScript('uploadImage', {
+      image: base64Image,
+      fileName: fileName || `image_${Date.now()}.jpg`,
+      folderId: CONFIG.DRIVE_FOLDER_ID
+    });
+    if (result.success) {
+      showSyncIndicator('Şəkil yükləndi!', 'success');
+      setTimeout(hideSyncIndicator, 1200);
+      // FIX: directUrl istifadə et - bu Google Sheets-də düzgün göstərilir
+      return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
+    }
+    throw new Error(result.error || 'Upload error');
+  } catch (error) {
+    console.error('Upload error:', error);
+    showSyncIndicator('Şəkil yüklənmədi!', 'error');
+    setTimeout(hideSyncIndicator, 2200);
+    return null;
+  }
 }
 
 async function uploadVideoToDrive(base64Video, fileName) {
-try {
-showSyncIndicator('Video yüklənir...', 'loading');
-const result = await postAppsScript('uploadVideo', {
-video: base64Video,
-fileName: fileName || `video_${Date.now()}.mp4`,
-folderId: CONFIG.DRIVE_FOLDER_ID
-});
-if (result.success) {
-showSyncIndicator('Video yükləndi!', 'success');
-setTimeout(hideSyncIndicator, 1200);
-return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
-}
-throw new Error(result.error || 'Video upload error');
-} catch (error) {
-console.error('Video upload error:', error);
-showSyncIndicator('Video yüklənmədi!', 'error');
-setTimeout(hideSyncIndicator, 2200);
-return null;
-}
+  try {
+    showSyncIndicator('Video yüklənir...', 'loading');
+    const result = await postAppsScript('uploadVideo', {
+      video: base64Video,
+      fileName: fileName || `video_${Date.now()}.mp4`,
+      folderId: CONFIG.DRIVE_FOLDER_ID
+    });
+    if (result.success) {
+      showSyncIndicator('Video yükləndi!', 'success');
+      setTimeout(hideSyncIndicator, 1200);
+      return normalizeDriveFileUrl(result.directUrl || result.thumbnailUrl || result.viewUrl || '');
+    }
+    throw new Error(result.error || 'Video upload error');
+  } catch (error) {
+    showSyncIndicator('Video yüklənmədi!', 'error');
+    setTimeout(hideSyncIndicator, 2200);
+    return null;
+  }
 }
 
 async function parseAppsScriptResponse(response) {
-const raw = await response.text();
-try {
-return JSON.parse(raw);
-} catch {
-throw new Error(raw || `HTTP ${response.status}`);
-}
+  const raw = await response.text();
+  try { return JSON.parse(raw); } catch { throw new Error(raw || `HTTP ${response.status}`); }
 }
 
 async function postAppsScript(action, payload = {}) {
-const jsonPayload = { action, ...payload };
-// Use Content-Type: text/plain to avoid CORS preflight (OPTIONS) requests.
-// GAS web apps do not officially support doOptions, so preflight blocks the POST.
-// text/plain is a "simple" CORS request that requires no preflight, and
-// GAS's parsePostBody_() falls through to JSON.parse() for unknown content types,
-// so the JSON body is still parsed correctly on the server side.
-try {
-const response = await fetch(CONFIG.GAS_URL, {
-method: 'POST',
-headers: { 'Content-Type': 'text/plain' },
-body: JSON.stringify(jsonPayload)
-});
-return await parseAppsScriptResponse(response);
-} catch (err) {
-console.log('text/plain POST failed, trying form-encoded fallback...', err);
+  const jsonPayload = { action, ...payload };
+  try {
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(jsonPayload)
+    });
+    return await parseAppsScriptResponse(response);
+  } catch (err) { console.log('text/plain POST failed, trying form-encoded...', err); }
+  const formPayload = new URLSearchParams();
+  formPayload.append('action', action);
+  Object.entries(payload).forEach(([key, value]) => {
+    formPayload.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+  });
+  const response = await fetch(CONFIG.GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formPayload.toString()
+  });
+  return await parseAppsScriptResponse(response);
 }
 
-// Fallback: application/x-www-form-urlencoded (also a simple CORS request, no preflight).
-// URLSearchParams correctly percent-encodes base64 characters (+, /, =).
-const formPayload = new URLSearchParams();
-formPayload.append('action', action);
-Object.entries(payload).forEach(([key, value]) => {
-if (typeof value === 'object') {
-formPayload.append(key, JSON.stringify(value));
-} else {
-formPayload.append(key, String(value));
-}
-});
-const response = await fetch(CONFIG.GAS_URL, {
-method: 'POST',
-headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-body: formPayload.toString()
-});
-return await parseAppsScriptResponse(response);
-}
-
+// ============================================
+// FIX 2: buildSyncPayload - always output plain string[] for images
+// ============================================
 function buildSyncPayload() {
-const cleanSettings = { ...settings };
-if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
-if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
-if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
-if (!Array.isArray(cleanSettings.bannerImages)) {
-cleanSettings.bannerImages = [];
-} else {
-cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
-const normalized = { ...(item || {}) };
-if (typeof normalized.image === 'string' && normalized.image.startsWith('data:')) {
-normalized.image = '';
-}
-return normalized;
-});
-}
+  const cleanSettings = { ...settings };
+  if (typeof cleanSettings.logo === 'string' && cleanSettings.logo.startsWith('data:')) delete cleanSettings.logo;
+  if (typeof cleanSettings.heroImage === 'string' && cleanSettings.heroImage.startsWith('data:')) delete cleanSettings.heroImage;
+  if (typeof cleanSettings.popupImage === 'string' && cleanSettings.popupImage.startsWith('data:')) delete cleanSettings.popupImage;
+  if (!Array.isArray(cleanSettings.bannerImages)) {
+    cleanSettings.bannerImages = [];
+  } else {
+    cleanSettings.bannerImages = cleanSettings.bannerImages.map(item => {
+      const normalized = { ...(item || {}) };
+      if (typeof normalized.image === 'string' && normalized.image.startsWith('data:')) normalized.image = '';
+      return normalized;
+    });
+  }
 
-const cleanProducts = products.map(product => {
-const normalized = normalizeProduct(product);
-if ((!Array.isArray(normalized.images) || normalized.images.length === 0) && typeof normalized.imagesJson === 'string') {
-normalized.images = parsePossibleJson(normalized.imagesJson, []);
-}
-if (Array.isArray(normalized.images)) {
-normalized.images = normalized.images.filter(img => !(typeof img === 'string' && img.startsWith('data:')));
-} else {
-normalized.images = [];
-}
-normalized.images = normalized.images.map(normalizeDriveFileUrl).filter(Boolean);
-if (typeof normalized.videoUrl === 'string' && normalized.videoUrl.startsWith('data:')) {
-normalized.videoUrl = '';
-}
-normalized.videoUrl = normalizeDriveFileUrl(normalized.videoUrl || '');
-normalized.imagesJson = JSON.stringify(normalized.images);
-normalized.imageUrl = normalized.images[0] || '';
-return normalized;
-});
+  const cleanProducts = products.map(product => {
+    const normalized = normalizeProduct(product);
 
-const cleanBannerImages = Array.isArray(cleanSettings.bannerImages)
-? cleanSettings.bannerImages.filter(item => item && item.image).map(item => item.image)
-: [];
-cleanSettings.logoUrl = cleanSettings.logo || '';
-cleanSettings.headerImage = cleanSettings.heroImage || '';
-cleanSettings.adImage = cleanSettings.popupImage || '';
-cleanSettings.bannerImagesJson = JSON.stringify(cleanBannerImages);
-cleanSettings.bannerImageUrls = cleanBannerImages.join(',');
+    // FIX: həmişə sadə string array istifadə et
+    let images = Array.isArray(normalized.images) ? normalized.images : [];
+    // data: URL-ləri filtrə et (artıq Drive-a yüklənməlidir)
+    images = images.filter(img => typeof img === 'string' && !img.startsWith('data:') && img.trim() !== '');
+    // Drive URL-lərini normalize et
+    images = images.map(normalizeDriveFileUrl).filter(Boolean);
 
-return {
-categories,
-products: cleanProducts,
-orders,
-tables,
-reservations,
-settings: cleanSettings
-};
+    const videoUrl = typeof normalized.videoUrl === 'string' && !normalized.videoUrl.startsWith('data:')
+      ? normalizeDriveFileUrl(normalized.videoUrl)
+      : '';
+
+    return {
+      ...normalized,
+      images: images,
+      imagesJson: JSON.stringify(images),  // sadə string array: ["url1","url2"]
+      imageUrl: images[0] || '',
+      videoUrl: videoUrl
+    };
+  });
+
+  const cleanBannerImages = Array.isArray(cleanSettings.bannerImages)
+    ? cleanSettings.bannerImages.filter(item => item && item.image).map(item => item.image)
+    : [];
+  cleanSettings.logoUrl = cleanSettings.logo || '';
+  cleanSettings.headerImage = cleanSettings.heroImage || '';
+  cleanSettings.adImage = cleanSettings.popupImage || '';
+  cleanSettings.bannerImagesJson = JSON.stringify(cleanBannerImages);
+  cleanSettings.bannerImageUrls = cleanBannerImages.join(',');
+
+  return {
+    categories,
+    products: cleanProducts,
+    orders,
+    tables,
+    reservations,
+    settings: cleanSettings
+  };
 }
 
 async function syncToGoogleSheets(showToast = true) {
-try {
-if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
-const payload = buildSyncPayload();
-const actions = ['syncData', 'saveMenu', 'updateMenu'];
-let lastError = null;
-
-for (const action of actions) {
-try {
-const result = await postAppsScript(action, { data: payload });
-if (result?.success) {
-if (showToast) {
-showSyncIndicator('Sinxronizasiya edildi!', 'success');
-showSyncBadge();
-setTimeout(hideSyncIndicator, 2200);
-}
-return result;
-}
-} catch (error) {
-lastError = error;
-console.log(`Action ${action} failed:`, error);
-}
-}
-throw lastError || new Error('All sync actions failed');
-} catch (error) {
-console.error('Sync error:', error);
-if (showToast) {
-showSyncIndicator('Sinxronizasiya xətası!', 'error');
-setTimeout(hideSyncIndicator, 2400);
-}
-throw error;
-}
+  try {
+    if (showToast) showSyncIndicator('Sinxronizasiya edilir...', 'loading');
+    const payload = buildSyncPayload();
+    const actions = ['syncData', 'saveMenu', 'updateMenu'];
+    let lastError = null;
+    for (const action of actions) {
+      try {
+        const result = await postAppsScript(action, { data: payload });
+        if (result?.success) {
+          if (showToast) { showSyncIndicator('Sinxronizasiya edildi!', 'success'); showSyncBadge(); setTimeout(hideSyncIndicator, 2200); }
+          return result;
+        }
+      } catch (error) { lastError = error; }
+    }
+    throw lastError || new Error('All sync actions failed');
+  } catch (error) {
+    if (showToast) { showSyncIndicator('Sinxronizasiya xətası!', 'error'); setTimeout(hideSyncIndicator, 2400); }
+    throw error;
+  }
 }
 
 function debouncedSync() {
-if (!CONFIG.AUTO_SYNC) return;
-clearTimeout(syncTimeout);
-syncTimeout = setTimeout(() => {
-syncToGoogleSheets(false);
-}, CONFIG.SYNC_DELAY);
+  if (!CONFIG.AUTO_SYNC) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => syncToGoogleSheets(false), CONFIG.SYNC_DELAY);
 }
-
-async function immediateSync() {
-clearTimeout(syncTimeout);
-await syncToGoogleSheets(true);
-}
-
-async function manualSync() {
-await immediateSync();
-}
+async function immediateSync() { clearTimeout(syncTimeout); await syncToGoogleSheets(true); }
+async function manualSync() { await immediateSync(); }
 
 async function loadInitialDataFromServer() {
-try {
-showSyncIndicator('Məlumatlar yüklənir...', 'loading');
-const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, {
-cache: 'no-store',
-headers: { 'Accept': 'application/json' }
-});
-const raw = await response.json();
-const data = normalizeServerPayload(raw);
-
-categories = data.categories;
-products = data.products;
-orders = data.orders;
-tables = data.tables;
-reservations = data.reservations;
-settings = data.settings;
-
-currentLogo = settings.logo || null;
-currentHeroImage = settings.heroImage || null;
-currentPopupImage = settings.popupImage || null;
-bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
-
-saveLocalState();
-hideSyncIndicator();
-initApp();
-} catch (e) {
-console.error('Initial load error:', e);
-hideSyncIndicator();
-initApp();
-}
+  try {
+    showSyncIndicator('Məlumatlar yüklənir...', 'loading');
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    const raw = await response.json();
+    const data = normalizeServerPayload(raw);
+    categories = data.categories;
+    products = data.products;
+    orders = data.orders;
+    tables = data.tables;
+    reservations = data.reservations;
+    settings = data.settings;
+    currentLogo = settings.logo || null;
+    currentHeroImage = settings.heroImage || null;
+    currentPopupImage = settings.popupImage || null;
+    bannerImages = Array.isArray(settings.bannerImages) ? settings.bannerImages : [];
+    saveLocalState();
+    hideSyncIndicator();
+    initApp();
+  } catch (e) { console.error('Initial load error:', e); hideSyncIndicator(); initApp(); }
 }
 
 // ============================================
-// AUTH FUNCTIONS
+// AUTH
 // ============================================
 function togglePassword() {
-const input = document.getElementById('password');
-const icon = document.getElementById('eye-icon');
-if (input.type === 'password') {
-input.type = 'text';
-icon.classList.replace('fa-eye', 'fa-eye-slash');
-} else {
-input.type = 'password';
-icon.classList.replace('fa-eye-slash', 'fa-eye');
+  const input = document.getElementById('password');
+  const icon = document.getElementById('eye-icon');
+  if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+  else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
 }
-}
-
 async function handleLogin(e) {
-e.preventDefault();
-const username = document.getElementById('username').value.trim();
-const password = document.getElementById('password').value;
-if (username !== 'admin' || password !== 'admin123') {
-document.getElementById('login-error').classList.remove('hidden');
-return;
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  if (username !== 'admin' || password !== 'admin123') { document.getElementById('login-error').classList.remove('hidden'); return; }
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  await loadInitialDataFromServer();
 }
-document.getElementById('login-error').classList.add('hidden');
-document.getElementById('login-screen').classList.add('hidden');
-document.getElementById('main-app').classList.remove('hidden');
-await loadInitialDataFromServer();
-}
-
 function logout() {
-document.getElementById('main-app').classList.add('hidden');
-document.getElementById('login-screen').classList.remove('hidden');
-document.getElementById('password').value = '';
-document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('password').value = '';
+  document.getElementById('login-error').classList.add('hidden');
 }
 
 // ============================================
 // NAVIGATION
 // ============================================
 function showPage(pageName) {
-document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
-const selected = document.getElementById('page-' + pageName);
-if (selected) selected.classList.remove('hidden');
-document.querySelectorAll('.nav-item').forEach(item => {
-item.classList.remove('active', 'text-white');
-item.classList.add('text-gray-300');
-});
-const activeNav = document.getElementById('nav-' + pageName);
-if (activeNav) {
-activeNav.classList.add('active', 'text-white');
-activeNav.classList.remove('text-gray-300');
-}
-const titles = {
-dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
-categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
-products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
-tables: ['Masalar', 'Masa və QR kodları idarə edin'],
-reservations: ['Rezervasiyalar', 'Rezervasiyaları idarə edin'],
-settings: ['Parametrlər', 'Restoran məlumatları və banner konfiqurasiyası']
-};
-document.getElementById('page-title').textContent = titles[pageName][0];
-document.getElementById('page-subtitle').textContent = titles[pageName][1];
-
-if (pageName === 'dashboard') {
-setTimeout(initCharts, 80);
-updateDashboard();
-} else if (pageName === 'categories') {
-renderCategories();
-} else if (pageName === 'products') {
-renderProducts();
-updateCategoryFilter();
-} else if (pageName === 'tables') {
-renderTables();
-} else if (pageName === 'reservations') {
-renderReservations();
-} else if (pageName === 'settings') {
-loadSettings();
-}
+  document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+  const selected = document.getElementById('page-' + pageName);
+  if (selected) selected.classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(item => { item.classList.remove('active', 'text-white'); item.classList.add('text-gray-300'); });
+  const activeNav = document.getElementById('nav-' + pageName);
+  if (activeNav) { activeNav.classList.add('active', 'text-white'); activeNav.classList.remove('text-gray-300'); }
+  const titles = {
+    dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
+    categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
+    products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
+    tables: ['Masalar', 'Masa və QR kodları idarə edin'],
+    reservations: ['Rezervasiyalar', 'Rezervasiyaları idarə edin'],
+    settings: ['Parametrlər', 'Restoran məlumatları və banner konfiqurasiyası']
+  };
+  document.getElementById('page-title').textContent = titles[pageName][0];
+  document.getElementById('page-subtitle').textContent = titles[pageName][1];
+  if (pageName === 'dashboard') { setTimeout(initCharts, 80); updateDashboard(); }
+  else if (pageName === 'categories') renderCategories();
+  else if (pageName === 'products') { renderProducts(); updateCategoryFilter(); }
+  else if (pageName === 'tables') renderTables();
+  else if (pageName === 'reservations') renderReservations();
+  else if (pageName === 'settings') loadSettings();
 }
 
 // ============================================
 // CATEGORY FUNCTIONS
 // ============================================
 function openCategoryModal(categoryId = null) {
-editingCategoryId = categoryId;
-document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
-document.getElementById('cat-name-az').value = '';
-document.getElementById('cat-icon').value = '🍽️';
-document.getElementById('cat-sort').value = '0';
-document.getElementById('cat-translation-box').classList.add('hidden');
-document.querySelectorAll('#icon-selector button').forEach(btn => {
-btn.classList.remove('border-green-900', 'bg-green-50');
-});
-if (categoryId) {
-const cat = categories.find(c => Number(c.id) === Number(categoryId));
-if (cat) {
-document.getElementById('cat-name-az').value = cat.nameAz || '';
-document.getElementById('cat-icon').value = cat.icon || '🍽️';
-document.getElementById('cat-sort').value = cat.sortOrder || 0;
-selectIcon(cat.icon || '🍽️');
-if (cat.nameEn) {
-document.getElementById('cat-translation-box').classList.remove('hidden');
-document.getElementById('cat-translated-text').textContent = cat.nameEn;
+  editingCategoryId = categoryId;
+  document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
+  document.getElementById('cat-name-az').value = '';
+  document.getElementById('cat-icon').value = '🍽️';
+  document.getElementById('cat-sort').value = '0';
+  document.getElementById('cat-translation-box').classList.add('hidden');
+  document.querySelectorAll('#icon-selector button').forEach(btn => btn.classList.remove('border-green-900', 'bg-green-50'));
+  if (categoryId) {
+    const cat = categories.find(c => Number(c.id) === Number(categoryId));
+    if (cat) {
+      document.getElementById('cat-name-az').value = cat.nameAz || '';
+      document.getElementById('cat-icon').value = cat.icon || '🍽️';
+      document.getElementById('cat-sort').value = cat.sortOrder || 0;
+      selectIcon(cat.icon || '🍽️');
+      if (cat.nameEn) { document.getElementById('cat-translation-box').classList.remove('hidden'); document.getElementById('cat-translated-text').textContent = cat.nameEn; }
+    }
+  }
+  document.getElementById('category-modal').classList.add('active');
 }
-}
-}
-document.getElementById('category-modal').classList.add('active');
-}
-
-function closeCategoryModal() {
-document.getElementById('category-modal').classList.remove('active');
-editingCategoryId = null;
-}
-
+function closeCategoryModal() { document.getElementById('category-modal').classList.remove('active'); editingCategoryId = null; }
 function selectIcon(icon) {
-document.getElementById('cat-icon').value = icon;
-document.querySelectorAll('#icon-selector button').forEach(btn => {
-btn.classList.remove('border-green-900', 'bg-green-50');
-if (btn.textContent === icon) {
-btn.classList.add('border-green-900', 'bg-green-50');
+  document.getElementById('cat-icon').value = icon;
+  document.querySelectorAll('#icon-selector button').forEach(btn => {
+    btn.classList.remove('border-green-900', 'bg-green-50');
+    if (btn.textContent === icon) btn.classList.add('border-green-900', 'bg-green-50');
+  });
 }
-});
-}
-
 async function saveCategory() {
-const nameAz = document.getElementById('cat-name-az').value.trim();
-const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
-const icon = document.getElementById('cat-icon').value;
-const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
-if (!nameAz) {
-alert('Kateqoriya adı daxil edin');
-return;
+  const nameAz = document.getElementById('cat-name-az').value.trim();
+  const nameEn = (document.getElementById('cat-translated-text').textContent || '').trim();
+  const icon = document.getElementById('cat-icon').value;
+  const sortOrder = safeNumber(document.getElementById('cat-sort').value, 0);
+  if (!nameAz) { alert('Kateqoriya adı daxil edin'); return; }
+  const catData = {
+    id: editingCategoryId || Date.now(), nameAz, nameEn: nameEn || nameAz, icon, sortOrder, active: true,
+    createdAt: editingCategoryId ? (categories.find(c => Number(c.id) === Number(editingCategoryId))?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+  if (editingCategoryId) { const index = categories.findIndex(c => Number(c.id) === Number(editingCategoryId)); if (index > -1) categories[index] = catData; }
+  else categories.unshift(catData);
+  saveLocalState(); closeCategoryModal(); renderCategories(); updateCategoryFilter(); updateStats(); updateDashboard();
+  await immediateSync();
 }
-const catData = {
-id: editingCategoryId || Date.now(),
-nameAz,
-nameEn: nameEn || nameAz,
-icon,
-sortOrder,
-active: true,
-createdAt: editingCategoryId
-? (categories.find(c => Number(c.id) === Number(editingCategoryId))?.createdAt || new Date().toISOString())
-: new Date().toISOString()
-};
-if (editingCategoryId) {
-const index = categories.findIndex(c => Number(c.id) === Number(editingCategoryId));
-if (index > -1) categories[index] = catData;
-} else {
-categories.unshift(catData);
-}
-saveLocalState();
-closeCategoryModal();
-renderCategories();
-updateCategoryFilter();
-updateStats();
-updateDashboard();
-await immediateSync();
-}
-
 function renderCategories() {
-const grid = document.getElementById('categories-grid');
-const search = (document.getElementById('category-search')?.value || '').toLowerCase();
-const filtered = [...categories]
-.sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-.filter(c =>
-(c.nameAz || '').toLowerCase().includes(search) ||
-(c.nameEn || '').toLowerCase().includes(search)
-);
-document.getElementById('category-count').textContent = filtered.length;
-if (!filtered.length) {
-grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>';
-return;
+  const grid = document.getElementById('categories-grid');
+  const search = (document.getElementById('category-search')?.value || '').toLowerCase();
+  const filtered = [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .filter(c => (c.nameAz || '').toLowerCase().includes(search) || (c.nameEn || '').toLowerCase().includes(search));
+  document.getElementById('category-count').textContent = filtered.length;
+  if (!filtered.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>'; return; }
+  grid.innerHTML = filtered.map(cat => `
+    <div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
+      <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon || '🍽️'}</div>
+      <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
+      <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
+      <div class="flex items-center justify-between mt-3">
+        <span class="status-badge bg-green-100 text-green-700">Aktiv</span>
+        <span class="text-xs text-gray-400">Sıra: ${safeNumber(cat.sortOrder, 0)}</span>
+      </div>
+    </div>`).join('');
 }
-grid.innerHTML = filtered.map(cat => `
-<div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
-<div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon || '🍽️'}</div>
-<h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
-<p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
-<div class="flex items-center justify-between mt-3">
-<span class="status-badge bg-green-100 text-green-700">Aktiv</span>
-<span class="text-xs text-gray-400">Sıra: ${safeNumber(cat.sortOrder, 0)}</span>
-</div>
-</div>
-`).join('');
-}
-
-function filterCategories() {
-renderCategories();
-}
-
+function filterCategories() { renderCategories(); }
 function updateCategoryFilter() {
-const select = document.getElementById('category-filter');
-if (!select) return;
-select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
-[...categories]
-.sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-.forEach(cat => {
-select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-});
+  const select = document.getElementById('category-filter');
+  if (!select) return;
+  select.innerHTML = '<option value="">Bütün kateqoriyalar</option>';
+  [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .forEach(cat => { select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`; });
 }
-
 function translateCategoryName() {
-const azText = document.getElementById('cat-name-az').value.trim();
-const box = document.getElementById('cat-translation-box');
-clearTimeout(categoryTranslateTimer);
-if (!azText) {
-box.classList.add('hidden');
-return;
-}
-categoryTranslateTimer = setTimeout(async () => {
-const translated = await translateViaAppsScript(azText, 'az', 'en');
-if (translated) {
-box.classList.remove('hidden');
-document.getElementById('cat-translated-text').textContent = translated;
-} else {
-box.classList.add('hidden');
-}
-}, 300);
+  const azText = document.getElementById('cat-name-az').value.trim();
+  const box = document.getElementById('cat-translation-box');
+  clearTimeout(categoryTranslateTimer);
+  if (!azText) { box.classList.add('hidden'); return; }
+  categoryTranslateTimer = setTimeout(async () => {
+    const translated = await translateViaAppsScript(azText, 'az', 'en');
+    if (translated) { box.classList.remove('hidden'); document.getElementById('cat-translated-text').textContent = translated; }
+    else box.classList.add('hidden');
+  }, 300);
 }
 
 // ============================================
 // VIDEO FUNCTIONS
 // ============================================
 async function handleVideoFileInput(input) {
-const file = input?.files?.[0];
-if (!file) return;
-if (!file.type.startsWith('video/')) {
-alert('Zəhmət olmasa video faylı seçin');
-input.value = '';
-return;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('video/')) { alert('Zəhmət olmasa video faylı seçin'); input.value = ''; return; }
+  if (file.size > 50 * 1024 * 1024) { alert('Video ölçüsü 50MB-dan çox ola bilməz'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    const base64Video = ev.target.result;
+    const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
+    if (!uploadedUrl) { alert('Video yüklənmədi. Yenidən cəhd edin.'); clearVideo(); return; }
+    document.getElementById('prod-video-url').value = uploadedUrl;
+    currentProductVideo = uploadedUrl;
+    updateVideoPreview();
+  };
+  reader.readAsDataURL(file);
 }
-const maxSize = 50 * 1024 * 1024;
-if (file.size > maxSize) {
-alert('Video ölçüsü 50MB-dan çox ola bilməz');
-input.value = '';
-return;
-}
-const reader = new FileReader();
-reader.onload = async function(ev) {
-const base64Video = ev.target.result;
-const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
-if (!uploadedUrl) {
-alert('Video yüklənmədi. Zəhmət olmasa yenidən cəhd edin.');
-clearVideo();
-return;
-}
-document.getElementById('prod-video-url').value = uploadedUrl;
-currentProductVideo = uploadedUrl;
-updateVideoPreview();
-};
-reader.readAsDataURL(file);
-}
-
 function updateVideoPreview() {
-const videoUrl = document.getElementById('prod-video-url').value.trim();
-const previewContainer = document.getElementById('video-preview-container');
-const videoPlayer = document.getElementById('video-preview-player');
-if (!videoUrl) {
-previewContainer.classList.add('hidden');
-return;
+  const videoUrl = document.getElementById('prod-video-url').value.trim();
+  const previewContainer = document.getElementById('video-preview-container');
+  const videoPlayer = document.getElementById('video-preview-player');
+  if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
+  videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  videoPlayer.load();
+  previewContainer.classList.remove('hidden');
 }
-videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-videoPlayer.load();
-previewContainer.classList.remove('hidden');
-}
-
 function clearVideo() {
-document.getElementById('prod-video-url').value = '';
-const fileInput = document.getElementById('prod-video-file');
-if (fileInput) fileInput.value = '';
-document.getElementById('video-preview-container').classList.add('hidden');
-currentProductVideo = '';
+  document.getElementById('prod-video-url').value = '';
+  const fileInput = document.getElementById('prod-video-file');
+  if (fileInput) fileInput.value = '';
+  document.getElementById('video-preview-container').classList.add('hidden');
+  currentProductVideo = '';
 }
-
 function openVideoModal(videoUrl) {
-if (!videoUrl) return;
-const modal = document.getElementById('video-modal');
-const player = document.getElementById('modal-video-player');
-player.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-player.load();
-modal.classList.add('active');
+  if (!videoUrl) return;
+  const modal = document.getElementById('video-modal');
+  const player = document.getElementById('modal-video-player');
+  player.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  player.load();
+  modal.classList.add('active');
 }
-
 function closeVideoModal() {
-const modal = document.getElementById('video-modal');
-const player = document.getElementById('modal-video-player');
-player.pause();
-modal.classList.remove('active');
+  const modal = document.getElementById('video-modal');
+  const player = document.getElementById('modal-video-player');
+  player.pause();
+  modal.classList.remove('active');
 }
 
 // ============================================
 // PRODUCT FUNCTIONS
 // ============================================
 function handleProductFieldInput(fieldType, lang, value) {
-const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
-if (!autoTranslateEnabled || isProductAutoTranslating) return;
-clearTimeout(productTranslateTimer);
-productTranslateTimer = setTimeout(async () => {
-const cleanValue = (value || '').trim();
-const targetIdMap = {
-name: { az: 'prod-name-en', en: 'prod-name-az' },
-desc: { az: 'prod-desc-en', en: 'prod-desc-az' }
-};
-const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
-if (!targetElement) return;
-if (!cleanValue) {
-isProductAutoTranslating = true;
-targetElement.value = '';
-isProductAutoTranslating = false;
-return;
-}
-isProductAutoTranslating = true;
-const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
-if (translatedText) targetElement.value = translatedText;
-isProductAutoTranslating = false;
-}, 350);
+  const autoTranslateEnabled = document.getElementById('auto-translate-enabled')?.checked;
+  if (!autoTranslateEnabled || isProductAutoTranslating) return;
+  clearTimeout(productTranslateTimer);
+  productTranslateTimer = setTimeout(async () => {
+    const cleanValue = (value || '').trim();
+    const targetIdMap = { name: { az: 'prod-name-en', en: 'prod-name-az' }, desc: { az: 'prod-desc-en', en: 'prod-desc-az' } };
+    const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
+    if (!targetElement) return;
+    if (!cleanValue) { isProductAutoTranslating = true; targetElement.value = ''; isProductAutoTranslating = false; return; }
+    isProductAutoTranslating = true;
+    const translatedText = await translateViaAppsScript(cleanValue, lang, lang === 'az' ? 'en' : 'az');
+    if (translatedText) targetElement.value = translatedText;
+    isProductAutoTranslating = false;
+  }, 350);
 }
 
 function openProductModal(productId = null) {
-editingProductId = productId;
-currentProductImages = [];
-currentProductVideo = '';
-document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
-document.getElementById('prod-name-az').value = '';
-document.getElementById('prod-name-en').value = '';
-document.getElementById('prod-desc-az').value = '';
-document.getElementById('prod-desc-en').value = '';
-document.getElementById('prod-category').value = '';
-document.getElementById('prod-price').value = '';
-document.getElementById('prod-volume').value = '';
-document.getElementById('prod-time').value = '3min';
-document.getElementById('prod-vat').value = '';
-document.getElementById('prod-video-url').value = '';
-document.getElementById('prod-video-file').value = '';
-document.getElementById('video-preview-container').classList.add('hidden');
-document.getElementById('prod-popular').checked = false;
-document.getElementById('prod-new').checked = false;
-document.getElementById('prod-recommended').checked = false;
-document.getElementById('prod-available').checked = true;
-document.getElementById('availability-label').textContent = 'Mövcuddur';
-document.getElementById('availability-label').classList.remove('text-red-600');
-document.getElementById('availability-label').classList.add('text-green-600');
-document.getElementById('image-preview').innerHTML = '';
+  editingProductId = productId;
+  currentProductImages = [];
+  currentProductVideo = '';
+  document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
+  ['prod-name-az','prod-name-en','prod-desc-az','prod-desc-en','prod-price','prod-volume','prod-vat'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('prod-category').value = '';
+  document.getElementById('prod-time').value = '3min';
+  document.getElementById('prod-video-url').value = '';
+  document.getElementById('prod-video-file').value = '';
+  document.getElementById('video-preview-container').classList.add('hidden');
+  document.getElementById('prod-popular').checked = false;
+  document.getElementById('prod-new').checked = false;
+  document.getElementById('prod-recommended').checked = false;
+  document.getElementById('prod-available').checked = true;
+  document.getElementById('availability-label').textContent = 'Mövcuddur';
+  document.getElementById('availability-label').classList.remove('text-red-600');
+  document.getElementById('availability-label').classList.add('text-green-600');
+  document.getElementById('image-preview').innerHTML = '';
 
-const catSelect = document.getElementById('prod-category');
-catSelect.innerHTML = '<option value="">Seçin...</option>';
-[...categories]
-.sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-.forEach(cat => {
-catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`;
-});
+  const catSelect = document.getElementById('prod-category');
+  catSelect.innerHTML = '<option value="">Seçin...</option>';
+  [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
+    .forEach(cat => { catSelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.nameAz)}</option>`; });
 
-if (productId) {
-const product = products.find(p => Number(p.id) === Number(productId));
-if (product) {
-document.getElementById('prod-name-az').value = product.nameAz || '';
-document.getElementById('prod-name-en').value = product.nameEn || '';
-document.getElementById('prod-desc-az').value = product.descAz || '';
-document.getElementById('prod-desc-en').value = product.descEn || '';
-document.getElementById('prod-category').value = product.categoryId || '';
-document.getElementById('prod-price').value = product.price || '';
-document.getElementById('prod-volume').value = product.specs?.volume || '';
-document.getElementById('prod-time').value = product.specs?.time || '3min';
-document.getElementById('prod-vat').value = product.vat || '';
-document.getElementById('prod-popular').checked = !!product.popular;
-document.getElementById('prod-new').checked = !!product.isNew;
-document.getElementById('prod-recommended').checked = !!product.recommended;
-document.getElementById('prod-available').checked = product.available !== false;
-if (product.videoUrl) {
-document.getElementById('prod-video-url').value = product.videoUrl;
-currentProductVideo = product.videoUrl;
-updateVideoPreview();
-}
-if (product.available === false) {
-document.getElementById('availability-label').textContent = 'Bitdi';
-document.getElementById('availability-label').classList.remove('text-green-600');
-document.getElementById('availability-label').classList.add('text-red-600');
-}
-currentProductImages = Array.isArray(product.images) ? [...product.images] : [];
-renderImagePreview();
-}
-}
-document.getElementById('product-modal').classList.add('active');
+  if (productId) {
+    const product = products.find(p => Number(p.id) === Number(productId));
+    if (product) {
+      document.getElementById('prod-name-az').value = product.nameAz || '';
+      document.getElementById('prod-name-en').value = product.nameEn || '';
+      document.getElementById('prod-desc-az').value = product.descAz || '';
+      document.getElementById('prod-desc-en').value = product.descEn || '';
+      document.getElementById('prod-category').value = product.categoryId || '';
+      document.getElementById('prod-price').value = product.price || '';
+      document.getElementById('prod-volume').value = product.specs?.volume || '';
+      document.getElementById('prod-time').value = product.specs?.time || '3min';
+      document.getElementById('prod-vat').value = product.vat || '';
+      document.getElementById('prod-popular').checked = !!product.popular;
+      document.getElementById('prod-new').checked = !!product.isNew;
+      document.getElementById('prod-recommended').checked = !!product.recommended;
+      document.getElementById('prod-available').checked = product.available !== false;
+      if (product.videoUrl) { document.getElementById('prod-video-url').value = product.videoUrl; currentProductVideo = product.videoUrl; updateVideoPreview(); }
+      if (product.available === false) {
+        document.getElementById('availability-label').textContent = 'Bitdi';
+        document.getElementById('availability-label').classList.remove('text-green-600');
+        document.getElementById('availability-label').classList.add('text-red-600');
+      }
+      // FIX: normalize images before showing in modal
+      const normalized = normalizeProduct(product);
+      currentProductImages = [...normalized.images];
+      renderImagePreview();
+    }
+  }
+  document.getElementById('product-modal').classList.add('active');
 }
 
 function closeProductModal() {
-document.getElementById('product-modal').classList.remove('active');
-editingProductId = null;
-currentProductImages = [];
-currentProductVideo = '';
+  document.getElementById('product-modal').classList.remove('active');
+  editingProductId = null; currentProductImages = []; currentProductVideo = '';
 }
 
-function handleDragOver(e) {
-e.preventDefault();
-e.currentTarget.classList.add('dragover');
-}
-
-function handleDragLeave(e) {
-e.currentTarget.classList.remove('dragover');
-}
-
-function handleDrop(e) {
-e.preventDefault();
-e.currentTarget.classList.remove('dragover');
-handleFiles(e.dataTransfer.files);
-}
-
+function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+function handleDragLeave(e) { e.currentTarget.classList.remove('dragover'); }
+function handleDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('dragover'); handleFiles(e.dataTransfer.files); }
 function handleFiles(files) {
-Array.from(files).forEach(file => {
-if (file.type.startsWith('image/')) {
-const reader = new FileReader();
-reader.onload = function(ev) {
-currentProductImages.push(ev.target.result);
-renderImagePreview();
-};
-reader.readAsDataURL(file);
+  Array.from(files).forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(ev) { currentProductImages.push(ev.target.result); renderImagePreview(); };
+      reader.readAsDataURL(file);
+    }
+  });
 }
-});
-}
-
 function renderImagePreview() {
-const container = document.getElementById('image-preview');
-container.innerHTML = currentProductImages.map((img, index) => {
-const safeImg = String(img).replaceAll("'", "\\'");
-return `
-<div class="image-item" onclick="viewImage('${safeImg}')">
-<img src="${img}" alt="Preview ${index + 1}">
-<button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})">
-<i class="fas fa-times"></i>
-</button>
-</div>
-`;
-}).join('');
+  const container = document.getElementById('image-preview');
+  container.innerHTML = currentProductImages.map((img, index) => {
+    const safeImg = String(img).replaceAll("'", "\\'");
+    return `<div class="image-item" onclick="viewImage('${safeImg}')">
+      <img src="${img}" alt="Preview ${index + 1}">
+      <button type="button" class="remove-btn" onclick="event.stopPropagation(); removeImage(${index})"><i class="fas fa-times"></i></button>
+    </div>`;
+  }).join('');
 }
-
-function removeImage(index) {
-currentProductImages.splice(index, 1);
-renderImagePreview();
-}
-
+function removeImage(index) { currentProductImages.splice(index, 1); renderImagePreview(); }
 function viewImage(src) {
-const modal = document.createElement('div');
-modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
-modal.innerHTML = `
-<img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
-<button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()">
-<i class="fas fa-times"></i>
-</button>
-`;
-modal.onclick = () => modal.remove();
-document.body.appendChild(modal);
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+  modal.innerHTML = `<img src="${src}" class="max-w-full max-h-full rounded-lg" onclick="event.stopPropagation()">
+    <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+  modal.onclick = () => modal.remove();
+  document.body.appendChild(modal);
 }
 
+// ============================================
+// FIX 3: saveProduct - upload images and store as plain string URLs
+// ============================================
 async function saveProduct() {
-const nameAz = document.getElementById('prod-name-az').value.trim();
-let nameEn = document.getElementById('prod-name-en').value.trim();
-const descAz = document.getElementById('prod-desc-az').value.trim();
-let descEn = document.getElementById('prod-desc-en').value.trim();
-const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
-const price = safeNumber(document.getElementById('prod-price').value, 0);
-const available = document.getElementById('prod-available').checked;
-const videoUrl = document.getElementById('prod-video-url').value.trim();
+  const nameAz = document.getElementById('prod-name-az').value.trim();
+  let nameEn = document.getElementById('prod-name-en').value.trim();
+  const descAz = document.getElementById('prod-desc-az').value.trim();
+  let descEn = document.getElementById('prod-desc-en').value.trim();
+  const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
+  const price = safeNumber(document.getElementById('prod-price').value, 0);
+  const available = document.getElementById('prod-available').checked;
+  const videoUrl = document.getElementById('prod-video-url').value.trim();
 
-if (!nameAz || !categoryId || !price) {
-alert('Vacib xanaları doldurun (Yeməyin adı, Kateqoriya, Qiymət)');
-return;
-}
+  if (!nameAz || !categoryId || !price) { alert('Vacib xanaları doldurun (Yeməyin adı, Kateqoriya, Qiymət)'); return; }
 
-if (!nameEn) {
-nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz;
-document.getElementById('prod-name-en').value = nameEn;
-}
-if (!descEn && descAz) {
-descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz;
-document.getElementById('prod-desc-en').value = descEn;
-}
+  if (!nameEn) { nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz; document.getElementById('prod-name-en').value = nameEn; }
+  if (!descEn && descAz) { descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz; document.getElementById('prod-desc-en').value = descEn; }
 
-const progressDiv = document.getElementById('upload-progress');
-const totalImages = currentProductImages.length;
-const uploadedImages = [];
+  const progressDiv = document.getElementById('upload-progress');
+  const totalImages = currentProductImages.length;
+  const uploadedImages = [];
 
-if (totalImages > 0) progressDiv.classList.remove('hidden');
+  if (totalImages > 0) progressDiv.classList.remove('hidden');
 
-for (let i = 0; i < currentProductImages.length; i++) {
-const img = currentProductImages[i];
-const percent = Math.round(((i + 1) / totalImages) * 100);
-document.getElementById('upload-percent').textContent = percent + '%';
-document.getElementById('progress-fill').style.width = percent + '%';
-if (typeof img === 'string' && img.startsWith('data:')) {
-const url = await uploadImageToDrive(
-img,
-`product_${Date.now()}_${i}.jpg`,
-editingProductId ? String(editingProductId) : ''
-);
-if (!url) {
-throw new Error('Şəkil Drive-a yüklənmədi. Yenidən cəhd edin.');
-}
-uploadedImages.push(url);
-} else {
-uploadedImages.push(normalizeDriveFileUrl(img));
-}
-}
+  for (let i = 0; i < currentProductImages.length; i++) {
+    const img = currentProductImages[i];
+    const percent = Math.round(((i + 1) / totalImages) * 100);
+    document.getElementById('upload-percent').textContent = percent + '%';
+    document.getElementById('progress-fill').style.width = percent + '%';
 
-currentProductImages = [...uploadedImages];
+    if (typeof img === 'string' && img.startsWith('data:')) {
+      // Yeni şəkil - Drive-a yüklə, sadə URL al
+      const url = await uploadImageToDrive(img, `product_${Date.now()}_${i}.jpg`);
+      if (!url) { progressDiv.classList.add('hidden'); alert('Şəkil yüklənmədi. Yenidən cəhd edin.'); return; }
+      uploadedImages.push(url);  // sadə string URL
+    } else if (typeof img === 'string' && img.trim() !== '') {
+      // Artıq Drive URL-i var
+      uploadedImages.push(normalizeDriveFileUrl(img));
+    }
+  }
 
-progressDiv.classList.add('hidden');
-document.getElementById('upload-percent').textContent = '0%';
-document.getElementById('progress-fill').style.width = '0%';
+  currentProductImages = [...uploadedImages];
+  progressDiv.classList.add('hidden');
+  document.getElementById('upload-percent').textContent = '0%';
+  document.getElementById('progress-fill').style.width = '0%';
 
-const existingCreatedAt = editingProductId
-? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
-: new Date().toISOString();
+  const existingCreatedAt = editingProductId
+    ? (products.find(p => Number(p.id) === Number(editingProductId))?.createdAt || new Date().toISOString())
+    : new Date().toISOString();
 
-const productData = {
-id: editingProductId || Date.now(),
-nameAz,
-nameEn,
-descAz,
-descEn,
-categoryId,
-categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
-price,
-images: uploadedImages,
-imagesJson: JSON.stringify(uploadedImages),
-imageUrl: uploadedImages[0] || '',
-videoUrl: videoUrl || '',
-specs: {
-volume: document.getElementById('prod-volume').value.trim(),
-time: document.getElementById('prod-time').value.trim()
-},
-vat: document.getElementById('prod-vat').value.trim(),
-popular: document.getElementById('prod-popular').checked,
-isNew: document.getElementById('prod-new').checked,
-recommended: document.getElementById('prod-recommended').checked,
-available,
-createdAt: existingCreatedAt
-};
+  const productData = {
+    id: editingProductId || Date.now(),
+    nameAz, nameEn, descAz, descEn, categoryId,
+    categoryName: categories.find(c => Number(c.id) === Number(categoryId))?.nameAz || '',
+    price,
+    images: uploadedImages,           // sadə string array: ["url1","url2"]
+    imagesJson: JSON.stringify(uploadedImages),  // şeetdə saxlanacaq format
+    imageUrl: uploadedImages[0] || '',
+    videoUrl: videoUrl || '',
+    specs: { volume: document.getElementById('prod-volume').value.trim(), time: document.getElementById('prod-time').value.trim() },
+    vat: document.getElementById('prod-vat').value.trim(),
+    popular: document.getElementById('prod-popular').checked,
+    isNew: document.getElementById('prod-new').checked,
+    recommended: document.getElementById('prod-recommended').checked,
+    available,
+    createdAt: existingCreatedAt
+  };
 
-if (editingProductId) {
-const index = products.findIndex(p => Number(p.id) === Number(editingProductId));
-if (index > -1) products[index] = productData;
-} else {
-products.unshift(productData);
-}
+  if (editingProductId) {
+    const index = products.findIndex(p => Number(p.id) === Number(editingProductId));
+    if (index > -1) products[index] = productData;
+  } else {
+    products.unshift(productData);
+  }
 
-autoSaveSettings(false);
-saveLocalState();
-closeProductModal();
-renderProducts();
-updateStats();
-updateDashboard();
-await immediateSync();
+  autoSaveSettings(false);
+  saveLocalState();
+  closeProductModal();
+  renderProducts();
+  updateStats();
+  updateDashboard();
+  await immediateSync();
 }
 
 function renderProducts() {
-const grid = document.getElementById('products-grid');
-const search = (document.getElementById('product-search')?.value || '').toLowerCase();
-const categoryFilter = document.getElementById('category-filter')?.value || '';
-const filtered = [...products].filter(p => {
-const matchesSearch =
-(p.nameAz || '').toLowerCase().includes(search) ||
-(p.nameEn || '').toLowerCase().includes(search);
-const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
-return matchesSearch && matchesCategory;
-});
-document.getElementById('product-count-header').textContent = filtered.length;
-if (!filtered.length) {
-grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>';
-return;
-}
-grid.innerHTML = filtered.map(product => {
-const category = categories.find(c => Number(c.id) === Number(product.categoryId));
-let imagesHtml = '';
-if (product.images && product.images.length > 0) {
-if (product.videoUrl) {
-imagesHtml += `
-<div class="video-thumbnail relative mb-2 cursor-pointer" onclick="event.stopPropagation(); openVideoModal('${product.videoUrl.replace(/'/g, "\\'")}')">
-<img src="${product.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[120px] object-cover rounded-lg opacity-80">
-<div class="play-overlay rounded-lg">
-<div class="play-icon">
-<i class="fas fa-play ml-1"></i>
-</div>
-</div>
-<div class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
-<i class="fas fa-video mr-1"></i>Video
-</div>
-</div>
-`;
-if (product.images.length > 1) {
-imagesHtml += '<div class="grid grid-cols-2 gap-2">';
-product.images.slice(1).forEach((img, idx) => {
-const safeImg = String(img).replaceAll("'", "\\'");
-imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 2}" class="w-full h-[80px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-});
-imagesHtml += '</div>';
-}
-} else {
-imagesHtml += '<div class="grid grid-cols-2 gap-2 mt-3">';
-product.images.forEach((img, idx) => {
-const safeImg = String(img).replaceAll("'", "\\'");
-imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx + 1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
-});
-imagesHtml += '</div>';
-}
-} else {
-imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
-}
-const badges = [];
-if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">Populyar</span>');
-if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Yeni</span>');
-if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">Tövsiyə</span>');
-if (product.videoUrl) badges.push('<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"><i class="fas fa-video mr-1"></i>Video</span>');
-const availBadge = product.available !== false
-? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
-: '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
-return `
-<div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover ${product.available === false ? 'opacity-75' : ''}">
-<div class="p-5">
-<div class="flex justify-between items-start mb-3">
-<div class="flex gap-2 flex-wrap">${badges.join('')}${availBadge}</div>
-<span class="text-lg font-bold text-gray-800">${safeNumber(product.price).toFixed(2)}₼</span>
-</div>
-<h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
-<p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
-<p class="text-xs text-gray-400 mb-3">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
-${product.specs?.volume ? `<p class="text-xs text-gray-400 mb-2">${escapeHtml(product.specs.volume)}</p>` : ''}
-${imagesHtml}
-<div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-<button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg text-sm font-medium">
-${product.available !== false ? 'Bitdi' : 'Mövcud'}
-</button>
-<button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
-<i class="fas fa-edit"></i>
-</button>
-<button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
-<i class="fas fa-trash"></i>
-</button>
-</div>
-</div>
-</div>
-`;
-}).join('');
+  const grid = document.getElementById('products-grid');
+  const search = (document.getElementById('product-search')?.value || '').toLowerCase();
+  const categoryFilter = document.getElementById('category-filter')?.value || '';
+  const filtered = [...products].filter(p => {
+    const matchesSearch = (p.nameAz || '').toLowerCase().includes(search) || (p.nameEn || '').toLowerCase().includes(search);
+    const matchesCategory = !categoryFilter || Number(p.categoryId) === Number(categoryFilter);
+    return matchesSearch && matchesCategory;
+  });
+  document.getElementById('product-count-header').textContent = filtered.length;
+  if (!filtered.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Məhsul tapılmadı</div>'; return; }
+  grid.innerHTML = filtered.map(product => {
+    // FIX: normalize before rendering so {url:...} objects are handled
+    const normalized = normalizeProduct(product);
+    const category = categories.find(c => Number(c.id) === Number(product.categoryId));
+    let imagesHtml = '';
+    if (normalized.images && normalized.images.length > 0) {
+      if (normalized.videoUrl) {
+        imagesHtml += `<div class="video-thumbnail relative mb-2 cursor-pointer" onclick="event.stopPropagation(); openVideoModal('${normalized.videoUrl.replace(/'/g, "\\'")}')">
+          <img src="${normalized.images[0]}" alt="${escapeHtml(product.nameAz)}" class="w-full h-[120px] object-cover rounded-lg opacity-80">
+          <div class="play-overlay rounded-lg"><div class="play-icon"><i class="fas fa-play ml-1"></i></div></div>
+          <div class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full"><i class="fas fa-video mr-1"></i>Video</div>
+        </div>`;
+        if (normalized.images.length > 1) {
+          imagesHtml += '<div class="grid grid-cols-2 gap-2">';
+          normalized.images.slice(1).forEach((img, idx) => {
+            const safeImg = String(img).replaceAll("'", "\\'");
+            imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx+2}" class="w-full h-[80px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
+          });
+          imagesHtml += '</div>';
+        }
+      } else {
+        imagesHtml += '<div class="grid grid-cols-2 gap-2 mt-3">';
+        normalized.images.forEach((img, idx) => {
+          const safeImg = String(img).replaceAll("'", "\\'");
+          imagesHtml += `<img src="${img}" alt="${escapeHtml(product.nameAz)} ${idx+1}" class="w-full h-[120px] object-cover rounded-lg cursor-pointer" onclick="event.stopPropagation(); viewImage('${safeImg}')">`;
+        });
+        imagesHtml += '</div>';
+      }
+    } else {
+      imagesHtml = '<div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mt-3"><i class="fas fa-image text-2xl"></i></div>';
+    }
+    const badges = [];
+    if (product.popular) badges.push('<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">Populyar</span>');
+    if (product.isNew) badges.push('<span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Yeni</span>');
+    if (product.recommended) badges.push('<span class="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">Tövsiyə</span>');
+    if (product.videoUrl) badges.push('<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"><i class="fas fa-video mr-1"></i>Video</span>');
+    const availBadge = product.available !== false
+      ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Mövcuddur</span>'
+      : '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Bitdi</span>';
+    return `<div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover ${product.available === false ? 'opacity-75' : ''}">
+      <div class="p-5">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex gap-2 flex-wrap">${badges.join('')}${availBadge}</div>
+          <span class="text-lg font-bold text-gray-800">${safeNumber(product.price).toFixed(2)}₼</span>
+        </div>
+        <h4 class="font-semibold text-gray-800 mb-1 ${product.available === false ? 'line-through text-gray-500' : ''}">${escapeHtml(product.nameAz)}</h4>
+        <p class="text-xs text-gray-500 mb-1">${escapeHtml(product.nameEn || '')}</p>
+        <p class="text-xs text-gray-400 mb-3">${escapeHtml(category?.nameAz || 'Kateqoriya yoxdur')}</p>
+        ${product.specs?.volume ? `<p class="text-xs text-gray-400 mb-2">${escapeHtml(product.specs.volume)}</p>` : ''}
+        ${imagesHtml}
+        <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+          <button onclick="event.stopPropagation(); toggleProductAvailability(${product.id})" class="flex-1 py-2 ${product.available !== false ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'} rounded-lg text-sm font-medium">
+            ${product.available !== false ? 'Bitdi' : 'Mövcud'}
+          </button>
+          <button onclick="event.stopPropagation(); openProductModal(${product.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"><i class="fas fa-edit"></i></button>
+          <button onclick="event.stopPropagation(); deleteProduct(${product.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function filterProducts() {
-renderProducts();
-}
-
+function filterProducts() { renderProducts(); }
 function toggleProductAvailability(productId) {
-const product = products.find(p => Number(p.id) === Number(productId));
-if (product) {
-product.available = product.available === false ? true : false;
-saveLocalState();
-renderProducts();
-debouncedSync();
+  const product = products.find(p => Number(p.id) === Number(productId));
+  if (product) { product.available = product.available === false ? true : false; saveLocalState(); renderProducts(); debouncedSync(); }
 }
-}
-
 function deleteProduct(id) {
-if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
-products = products.filter(p => Number(p.id) !== Number(id));
-autoSaveSettings(false);
-saveLocalState();
-renderProducts();
-updateStats();
-updateDashboard();
-debouncedSync();
-}
+  if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
+    products = products.filter(p => Number(p.id) !== Number(id));
+    autoSaveSettings(false); saveLocalState(); renderProducts(); updateStats(); updateDashboard(); debouncedSync();
+  }
 }
 
 // ============================================
 // TABLE FUNCTIONS
 // ============================================
 function openTableModal(tableId = null) {
-editingTableId = tableId;
-document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
-document.getElementById('table-number').value = '';
-document.getElementById('table-capacity').value = '4';
-document.getElementById('table-location').value = 'inside';
-if (tableId) {
-const table = tables.find(t => Number(t.id) === Number(tableId));
-if (table) {
-document.getElementById('table-number').value = table.number || '';
-document.getElementById('table-capacity').value = table.capacity || 4;
-document.getElementById('table-location').value = table.location || 'inside';
+  editingTableId = tableId;
+  document.getElementById('table-modal-title').textContent = tableId ? 'Masanı Redaktə Et' : 'Yeni Masa';
+  document.getElementById('table-number').value = '';
+  document.getElementById('table-capacity').value = '4';
+  document.getElementById('table-location').value = 'inside';
+  if (tableId) {
+    const table = tables.find(t => Number(t.id) === Number(tableId));
+    if (table) {
+      document.getElementById('table-number').value = table.number || '';
+      document.getElementById('table-capacity').value = table.capacity || 4;
+      document.getElementById('table-location').value = table.location || 'inside';
+    }
+  }
+  document.getElementById('table-modal').classList.add('active');
 }
-}
-document.getElementById('table-modal').classList.add('active');
-}
-
-function closeTableModal() {
-document.getElementById('table-modal').classList.remove('active');
-editingTableId = null;
-}
-
+function closeTableModal() { document.getElementById('table-modal').classList.remove('active'); editingTableId = null; }
 async function saveTable() {
-const number = document.getElementById('table-number').value.trim();
-const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
-const location = document.getElementById('table-location').value;
-if (!number) {
-alert('Masa nömrəsi daxil edin');
-return;
+  const number = document.getElementById('table-number').value.trim();
+  const capacity = safeNumber(document.getElementById('table-capacity').value, 4);
+  const location = document.getElementById('table-location').value;
+  if (!number) { alert('Masa nömrəsi daxil edin'); return; }
+  const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
+  const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
+  const tableData = {
+    id: editingTableId || Date.now(), number, capacity, location, qrUrl, status: 'empty',
+    createdAt: editingTableId ? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+  if (editingTableId) { const index = tables.findIndex(t => Number(t.id) === Number(editingTableId)); if (index > -1) tables[index] = { ...tables[index], ...tableData }; }
+  else tables.unshift(tableData);
+  saveLocalState(); closeTableModal(); renderTables(); updateStats();
+  await immediateSync();
 }
-const baseUrl = window.location.origin.replace('/admin', '') + '/menu.html';
-const qrUrl = `${baseUrl}?table=${encodeURIComponent(number)}`;
-const createdAt = editingTableId
-? (tables.find(t => Number(t.id) === Number(editingTableId))?.createdAt || new Date().toISOString())
-: new Date().toISOString();
-const tableData = {
-id: editingTableId || Date.now(),
-number,
-capacity,
-location,
-qrUrl,
-status: 'empty',
-createdAt
-};
-if (editingTableId) {
-const index = tables.findIndex(t => Number(t.id) === Number(editingTableId));
-if (index > -1) tables[index] = { ...tables[index], ...tableData };
-} else {
-tables.unshift(tableData);
-}
-saveLocalState();
-closeTableModal();
-renderTables();
-updateStats();
-await immediateSync();
-}
-
 function renderTables() {
-const grid = document.getElementById('tables-grid');
-document.getElementById('table-count').textContent = tables.length;
-if (!tables.length) {
-grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>';
-return;
+  const grid = document.getElementById('tables-grid');
+  document.getElementById('table-count').textContent = tables.length;
+  if (!tables.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Hələ masa əlavə edilməyib</div>'; return; }
+  const locationLabels = { inside:'İçəri', outside:'Çöl', terrace:'Terras', vip:'VIP' };
+  grid.innerHTML = tables.map(table => `
+    <div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
+        <span class="status-badge bg-green-100 text-green-700">Boş</span>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+        <span>${table.capacity} nəfər</span>
+        <span>${locationLabels[table.location] || 'İçəri'}</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm"><i class="fas fa-qrcode"></i> QR Kod</button>
+        <button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
 }
-grid.innerHTML = tables.map(table => {
-const locationLabels = { inside:'İçəri', outside:'Çöl', terrace:'Terras', vip:'VIP' };
-return `
-<div class="bg-white rounded-2xl p-6 shadow-sm card-hover">
-<div class="flex items-center justify-between mb-4">
-<h4 class="font-bold text-gray-800 text-lg">Masa ${escapeHtml(table.number)}</h4>
-<span class="status-badge bg-green-100 text-green-700">Boş</span>
-</div>
-<div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
-<span>${table.capacity} nəfər</span>
-<span>${locationLabels[table.location] || 'İçəri'}</span>
-</div>
-<div class="flex gap-2">
-<button onclick="showQRCode(${table.id})" class="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
-<i class="fas fa-qrcode"></i> QR Kod
-</button>
-<button onclick="openTableModal(${table.id})" class="px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
-<i class="fas fa-edit"></i>
-</button>
-<button onclick="deleteTable(${table.id})" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">
-<i class="fas fa-trash"></i>
-</button>
-</div>
-</div>
-`;
-}).join('');
-}
-
 function deleteTable(id) {
-if (confirm('Bu masanı silmək istədiyinizə əminsiniz?')) {
-tables = tables.filter(t => Number(t.id) !== Number(id));
-saveLocalState();
-renderTables();
-updateStats();
-debouncedSync();
+  if (confirm('Bu masanı silmək istədiyinizə əminsiniz?')) { tables = tables.filter(t => Number(t.id) !== Number(id)); saveLocalState(); renderTables(); updateStats(); debouncedSync(); }
 }
-}
-
 function showQRCode(tableId) {
-const table = tables.find(t => Number(t.id) === Number(tableId));
-if (!table) return;
-currentQRTable = table;
-document.getElementById('qr-table-name').textContent = `Masa ${table.number}`;
-const qrContainer = document.getElementById('qr-code-display');
-qrContainer.innerHTML = '';
-new QRCode(qrContainer, {
-text: table.qrUrl,
-width: 200,
-height: 200,
-colorDark: "#000000",
-colorLight: "#ffffff",
-correctLevel: QRCode.CorrectLevel.H
-});
-document.getElementById('qr-modal').classList.add('active');
+  const table = tables.find(t => Number(t.id) === Number(tableId));
+  if (!table) return;
+  currentQRTable = table;
+  document.getElementById('qr-table-name').textContent = `Masa ${table.number}`;
+  const qrContainer = document.getElementById('qr-code-display');
+  qrContainer.innerHTML = '';
+  new QRCode(qrContainer, { text: table.qrUrl, width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  document.getElementById('qr-modal').classList.add('active');
 }
-
-function closeQrModal() {
-document.getElementById('qr-modal').classList.remove('active');
-currentQRTable = null;
-}
-
+function closeQrModal() { document.getElementById('qr-modal').classList.remove('active'); currentQRTable = null; }
 function downloadQR() {
-const canvas = document.querySelector('#qr-code-display canvas');
-if (canvas && currentQRTable) {
-const link = document.createElement('a');
-link.download = `QR_Masa_${currentQRTable.number}.png`;
-link.href = canvas.toDataURL();
-link.click();
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (canvas && currentQRTable) { const link = document.createElement('a'); link.download = `QR_Masa_${currentQRTable.number}.png`; link.href = canvas.toDataURL(); link.click(); }
 }
-}
-
 function printQR() {
-const canvas = document.querySelector('#qr-code-display canvas');
-if (canvas && currentQRTable) {
-const printWindow = window.open('', '_blank');
-printWindow.document.write(`
-<html>
-<head><title>QR Kod - Masa ${currentQRTable.number}</title></head>
-<body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
-<div style="text-align:center;">
-<h2>Masa ${currentQRTable.number}</h2>
-<img src="${canvas.toDataURL()}" style="width:300px;height:300px;">
-<p>Menyuya baxmaq üçün skan edin</p>
-</div>
-</body>
-</html>
-`);
-printWindow.document.close();
-printWindow.print();
-}
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (canvas && currentQRTable) {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<html><head><title>QR Kod - Masa ${currentQRTable.number}</title></head>
+      <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
+      <div style="text-align:center;"><h2>Masa ${currentQRTable.number}</h2>
+      <img src="${canvas.toDataURL()}" style="width:300px;height:300px;">
+      <p>Menyuya baxmaq üçün skan edin</p></div></body></html>`);
+    printWindow.document.close(); printWindow.print();
+  }
 }
 
 // ============================================
 // RESERVATION FUNCTIONS
 // ============================================
 function openReservationModal(reservationId = null) {
-editingReservationId = reservationId;
-document.getElementById('reservation-modal-title').textContent = reservationId ? 'Rezervasiyanı Redaktə Et' : 'Yeni Rezervasiya';
-document.getElementById('res-customer').value = '';
-document.getElementById('res-phone').value = '';
-document.getElementById('res-date').value = '';
-document.getElementById('res-time').value = '';
-document.getElementById('res-guest').value = '2';
-document.getElementById('res-table').value = '';
-document.getElementById('res-notes').value = '';
-document.getElementById('res-status').value = 'pending';
-
-const tableSelect = document.getElementById('res-table');
-tableSelect.innerHTML = '<option value="">Seçin...</option>';
-tables.forEach(t => {
-tableSelect.innerHTML += `<option value="${t.id}">Masa ${escapeHtml(t.number)} (${t.capacity} nəfərlik)</option>`;
-});
-
-if (reservationId) {
-const res = reservations.find(r => Number(r.id) === Number(reservationId));
-if (res) {
-document.getElementById('res-customer').value = res.customer || '';
-document.getElementById('res-phone').value = res.phone || '';
-document.getElementById('res-date').value = res.date || '';
-document.getElementById('res-time').value = res.time || '';
-document.getElementById('res-guest').value = res.guest || 2;
-document.getElementById('res-table').value = res.tableId || '';
-document.getElementById('res-notes').value = res.notes || '';
-document.getElementById('res-status').value = res.status || 'pending';
+  editingReservationId = reservationId;
+  document.getElementById('reservation-modal-title').textContent = reservationId ? 'Rezervasiyanı Redaktə Et' : 'Yeni Rezervasiya';
+  ['res-customer','res-phone','res-date','res-time','res-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('res-guest').value = '2';
+  document.getElementById('res-table').value = '';
+  document.getElementById('res-status').value = 'pending';
+  const tableSelect = document.getElementById('res-table');
+  tableSelect.innerHTML = '<option value="">Seçin...</option>';
+  tables.forEach(t => { tableSelect.innerHTML += `<option value="${t.id}">Masa ${escapeHtml(t.number)} (${t.capacity} nəfərlik)</option>`; });
+  if (reservationId) {
+    const res = reservations.find(r => Number(r.id) === Number(reservationId));
+    if (res) {
+      document.getElementById('res-customer').value = res.customer || '';
+      document.getElementById('res-phone').value = res.phone || '';
+      document.getElementById('res-date').value = res.date || '';
+      document.getElementById('res-time').value = res.time || '';
+      document.getElementById('res-guest').value = res.guest || 2;
+      document.getElementById('res-table').value = res.tableId || '';
+      document.getElementById('res-notes').value = res.notes || '';
+      document.getElementById('res-status').value = res.status || 'pending';
+    }
+  }
+  document.getElementById('reservation-modal').classList.add('active');
 }
-}
-document.getElementById('reservation-modal').classList.add('active');
-}
-
-function closeReservationModal() {
-document.getElementById('reservation-modal').classList.remove('active');
-editingReservationId = null;
-}
-
+function closeReservationModal() { document.getElementById('reservation-modal').classList.remove('active'); editingReservationId = null; }
 async function saveReservation() {
-const customer = document.getElementById('res-customer').value.trim();
-const phone = document.getElementById('res-phone').value.trim();
-const date = document.getElementById('res-date').value;
-const time = document.getElementById('res-time').value;
-const guest = safeNumber(document.getElementById('res-guest').value, 2);
-const tableId = document.getElementById('res-table').value;
-const notes = document.getElementById('res-notes').value.trim();
-const status = document.getElementById('res-status').value;
-
-if (!customer || !phone || !date || !time) {
-alert('Vacib xanaları doldurun (Müştəri, Telefon, Tarix, Saat)');
-return;
+  const customer = document.getElementById('res-customer').value.trim();
+  const phone = document.getElementById('res-phone').value.trim();
+  const date = document.getElementById('res-date').value;
+  const time = document.getElementById('res-time').value;
+  const guest = safeNumber(document.getElementById('res-guest').value, 2);
+  const tableId = document.getElementById('res-table').value;
+  const notes = document.getElementById('res-notes').value.trim();
+  const status = document.getElementById('res-status').value;
+  if (!customer || !phone || !date || !time) { alert('Vacib xanaları doldurun'); return; }
+  const table = tables.find(t => Number(t.id) === Number(tableId));
+  const resData = {
+    id: editingReservationId || Date.now(), customer, phone, date, time, guest, tableId,
+    tableNumber: table ? table.number : '', notes, status,
+    createdAt: editingReservationId ? (reservations.find(r => Number(r.id) === Number(editingReservationId))?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+  if (editingReservationId) { const index = reservations.findIndex(r => Number(r.id) === Number(editingReservationId)); if (index > -1) reservations[index] = resData; }
+  else reservations.unshift(resData);
+  saveLocalState(); closeReservationModal(); renderReservations(); updateStats();
+  await immediateSync();
 }
-
-const table = tables.find(t => Number(t.id) === Number(tableId));
-const tableNumber = table ? table.number : '';
-
-const resData = {
-id: editingReservationId || Date.now(),
-customer,
-phone,
-date,
-time,
-guest,
-tableId,
-tableNumber,
-notes,
-status,
-createdAt: editingReservationId
-? (reservations.find(r => Number(r.id) === Number(editingReservationId))?.createdAt || new Date().toISOString())
-: new Date().toISOString()
-};
-
-if (editingReservationId) {
-const index = reservations.findIndex(r => Number(r.id) === Number(editingReservationId));
-if (index > -1) reservations[index] = resData;
-} else {
-reservations.unshift(resData);
-}
-
-saveLocalState();
-closeReservationModal();
-renderReservations();
-updateStats();
-await immediateSync();
-}
-
 function renderReservations() {
-const tbody = document.getElementById('reservations-table-body');
-document.getElementById('reservation-count').textContent = reservations.length;
-
-if (!reservations.length) {
-tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Hələ rezervasiya yoxdur</td></tr>';
-return;
+  const tbody = document.getElementById('reservations-table-body');
+  document.getElementById('reservation-count').textContent = reservations.length;
+  if (!reservations.length) { tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Hələ rezervasiya yoxdur</td></tr>'; return; }
+  const statusLabels = {
+    pending: { text: 'Gözləyir', class: 'bg-yellow-100 text-yellow-700' },
+    confirmed: { text: 'Təsdiqləndi', class: 'bg-green-100 text-green-700' },
+    cancelled: { text: 'Ləğv edildi', class: 'bg-red-100 text-red-700' },
+    completed: { text: 'Tamamlandı', class: 'bg-gray-100 text-gray-700' }
+  };
+  tbody.innerHTML = reservations.map(res => {
+    const status = statusLabels[res.status] || statusLabels.pending;
+    return `<tr class="hover:bg-gray-50">
+      <td class="px-6 py-4 font-medium text-gray-900">${escapeHtml(res.customer)}</td>
+      <td class="px-6 py-4 text-gray-600">${escapeHtml(res.phone)}</td>
+      <td class="px-6 py-4 text-gray-600">${res.date}</td>
+      <td class="px-6 py-4 text-gray-600">${res.time}</td>
+      <td class="px-6 py-4 text-gray-600">${res.guest} nəfər</td>
+      <td class="px-6 py-4 text-gray-600">${res.tableNumber ? 'Masa ' + escapeHtml(res.tableNumber) : '-'}</td>
+      <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium ${status.class}">${status.text}</span></td>
+      <td class="px-6 py-4">
+        <div class="flex gap-2">
+          <button onclick="openReservationModal(${res.id})" class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteReservation(${res.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 }
-
-const statusLabels = {
-pending: { text: 'Gözləyir', class: 'bg-yellow-100 text-yellow-700' },
-confirmed: { text: 'Təsdiqləndi', class: 'bg-green-100 text-green-700' },
-cancelled: { text: 'Ləğv edildi', class: 'bg-red-100 text-red-700' },
-completed: { text: 'Tamamlandı', class: 'bg-gray-100 text-gray-700' }
-};
-
-tbody.innerHTML = reservations.map(res => {
-const status = statusLabels[res.status] || statusLabels.pending;
-return `
-<tr class="hover:bg-gray-50">
-<td class="px-6 py-4 font-medium text-gray-900">${escapeHtml(res.customer)}</td>
-<td class="px-6 py-4 text-gray-600">${escapeHtml(res.phone)}</td>
-<td class="px-6 py-4 text-gray-600">${res.date}</td>
-<td class="px-6 py-4 text-gray-600">${res.time}</td>
-<td class="px-6 py-4 text-gray-600">${res.guest} nəfər</td>
-<td class="px-6 py-4 text-gray-600">${res.tableNumber ? 'Masa ' + escapeHtml(res.tableNumber) : '-'}</td>
-<td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium ${status.class}">${status.text}</span></td>
-<td class="px-6 py-4">
-<div class="flex gap-2">
-<button onclick="openReservationModal(${res.id})" class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
-<button onclick="deleteReservation(${res.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
-</div>
-</td>
-</tr>
-`;
-}).join('');
-}
-
 function deleteReservation(id) {
-if (confirm('Bu rezervasiyanı silmək istədiyinizə əminsiniz?')) {
-reservations = reservations.filter(r => Number(r.id) !== Number(id));
-saveLocalState();
-renderReservations();
-updateStats();
-debouncedSync();
-}
+  if (confirm('Bu rezervasiyanı silmək istədiyinizə əminsiniz?')) { reservations = reservations.filter(r => Number(r.id) !== Number(id)); saveLocalState(); renderReservations(); updateStats(); debouncedSync(); }
 }
 
 // ============================================
 // SETTINGS FUNCTIONS
 // ============================================
 async function handleLogoUpload(input) {
-if (input.files && input.files[0]) {
-const reader = new FileReader();
-reader.onload = async function(e) {
-const base64 = e.target.result;
-const uploadedUrl = await uploadImageToDrive(base64, `logo_${Date.now()}.png`);
-currentLogo = uploadedUrl || base64;
-document.getElementById('logo-image').src = currentLogo;
-document.getElementById('logo-image').classList.remove('hidden');
-document.getElementById('logo-placeholder').classList.add('hidden');
-autoSaveSettings();
-};
-reader.readAsDataURL(input.files[0]);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const uploadedUrl = await uploadImageToDrive(e.target.result, `logo_${Date.now()}.png`);
+      currentLogo = uploadedUrl || e.target.result;
+      document.getElementById('logo-image').src = currentLogo;
+      document.getElementById('logo-image').classList.remove('hidden');
+      document.getElementById('logo-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
 }
-}
-
 function removeLogo() {
-currentLogo = null;
-document.getElementById('logo-image').classList.add('hidden');
-document.getElementById('logo-placeholder').classList.remove('hidden');
-document.getElementById('logo-image').src = '';
-autoSaveSettings();
+  currentLogo = null;
+  document.getElementById('logo-image').classList.add('hidden');
+  document.getElementById('logo-placeholder').classList.remove('hidden');
+  document.getElementById('logo-image').src = '';
+  autoSaveSettings();
 }
-
 async function handleHeroImageUpload(input) {
-if (input.files && input.files[0]) {
-const reader = new FileReader();
-reader.onload = async function(e) {
-const base64 = e.target.result;
-const uploadedUrl = await uploadImageToDrive(base64, `hero_${Date.now()}.jpg`);
-currentHeroImage = uploadedUrl || base64;
-document.getElementById('hero-image-preview').src = currentHeroImage;
-document.getElementById('hero-image-preview').classList.remove('hidden');
-document.getElementById('hero-image-placeholder').classList.add('hidden');
-autoSaveSettings();
-};
-reader.readAsDataURL(input.files[0]);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const uploadedUrl = await uploadImageToDrive(e.target.result, `hero_${Date.now()}.jpg`);
+      currentHeroImage = uploadedUrl || e.target.result;
+      document.getElementById('hero-image-preview').src = currentHeroImage;
+      document.getElementById('hero-image-preview').classList.remove('hidden');
+      document.getElementById('hero-image-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
 }
-}
-
 function removeHeroImage() {
-currentHeroImage = null;
-document.getElementById('hero-image-preview').src = '';
-document.getElementById('hero-image-preview').classList.add('hidden');
-document.getElementById('hero-image-placeholder').classList.remove('hidden');
-autoSaveSettings();
+  currentHeroImage = null;
+  document.getElementById('hero-image-preview').src = '';
+  document.getElementById('hero-image-preview').classList.add('hidden');
+  document.getElementById('hero-image-placeholder').classList.remove('hidden');
+  autoSaveSettings();
 }
-
 async function handlePopupImageUpload(input) {
-if (input.files && input.files[0]) {
-const reader = new FileReader();
-reader.onload = async function(e) {
-const base64 = e.target.result;
-const uploadedUrl = await uploadImageToDrive(base64, `popup_${Date.now()}.jpg`);
-currentPopupImage = uploadedUrl || base64;
-document.getElementById('popup-image-preview').src = currentPopupImage;
-document.getElementById('popup-image-preview').classList.remove('hidden');
-document.getElementById('popup-image-placeholder').classList.add('hidden');
-autoSaveSettings();
-};
-reader.readAsDataURL(input.files[0]);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const uploadedUrl = await uploadImageToDrive(e.target.result, `popup_${Date.now()}.jpg`);
+      currentPopupImage = uploadedUrl || e.target.result;
+      document.getElementById('popup-image-preview').src = currentPopupImage;
+      document.getElementById('popup-image-preview').classList.remove('hidden');
+      document.getElementById('popup-image-placeholder').classList.add('hidden');
+      autoSaveSettings();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
 }
-}
-
 function removePopupImage() {
-currentPopupImage = null;
-document.getElementById('popup-image-preview').src = '';
-document.getElementById('popup-image-preview').classList.add('hidden');
-document.getElementById('popup-image-placeholder').classList.remove('hidden');
-autoSaveSettings();
+  currentPopupImage = null;
+  document.getElementById('popup-image-preview').src = '';
+  document.getElementById('popup-image-preview').classList.add('hidden');
+  document.getElementById('popup-image-placeholder').classList.remove('hidden');
+  autoSaveSettings();
 }
-
 async function handleBannerFiles(files) {
-const list = Array.from(files || []).filter(file => file.type.startsWith('image/'));
-for (let i = 0; i < list.length; i++) {
-const file = list[i];
-const base64 = await new Promise((resolve) => {
-const reader = new FileReader();
-reader.onload = (e) => resolve(e.target.result);
-reader.readAsDataURL(file);
-});
-const uploadedUrl = await uploadImageToDrive(base64, `banner_${Date.now()}_${i}.jpg`);
-bannerImages.push({
-id: Date.now() + i,
-image: uploadedUrl || base64,
-title: file.name.replace(/\.[^/.]+$/, ''),
-active: true
-});
+  const list = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i];
+    const base64 = await new Promise((resolve) => { const r = new FileReader(); r.onload = (e) => resolve(e.target.result); r.readAsDataURL(file); });
+    const uploadedUrl = await uploadImageToDrive(base64, `banner_${Date.now()}_${i}.jpg`);
+    bannerImages.push({ id: Date.now() + i, image: uploadedUrl || base64, title: file.name.replace(/\.[^/.]+$/, ''), active: true });
+  }
+  renderBannerList(); autoSaveSettings();
 }
-renderBannerList();
-autoSaveSettings();
-}
-
-function removeBanner(id) {
-bannerImages = bannerImages.filter(item => Number(item.id) !== Number(id));
-renderBannerList();
-autoSaveSettings();
-}
-
+function removeBanner(id) { bannerImages = bannerImages.filter(item => Number(item.id) !== Number(id)); renderBannerList(); autoSaveSettings(); }
 function toggleBannerStatus(id) {
-const item = bannerImages.find(b => Number(b.id) === Number(id));
-if (item) {
-item.active = item.active === false ? true : false;
-renderBannerList();
-autoSaveSettings();
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) { item.active = item.active === false ? true : false; renderBannerList(); autoSaveSettings(); }
 }
-}
-
 function updateBannerTitle(id, value) {
-const item = bannerImages.find(b => Number(b.id) === Number(id));
-if (item) {
-item.title = value || '';
-autoSaveSettings();
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) { item.title = value || ''; autoSaveSettings(); }
 }
-}
-
 function renderBannerList() {
-const list = document.getElementById('banner-list');
-const empty = document.getElementById('banner-empty');
-if (!list || !empty) return;
-if (!bannerImages.length) {
-list.innerHTML = '';
-empty.classList.remove('hidden');
-return;
+  const list = document.getElementById('banner-list');
+  const empty = document.getElementById('banner-empty');
+  if (!list || !empty) return;
+  if (!bannerImages.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  list.innerHTML = bannerImages.map(item => `
+    <div class="banner-card">
+      <img src="${item.image}" class="banner-thumb" alt="${escapeHtml(item.title || 'banner')}">
+      <div class="p-3">
+        <input type="text" value="${escapeHtml(item.title || '')}" onchange="updateBannerTitle(${item.id}, this.value)" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3" placeholder="Banner adı">
+        <div class="flex items-center justify-between gap-2">
+          <button onclick="toggleBannerStatus(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${item.active !== false ? 'Aktiv' : 'Passiv'}</button>
+          <button onclick="removeBanner(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-600">Sil</button>
+        </div>
+      </div>
+    </div>`).join('');
 }
-empty.classList.add('hidden');
-list.innerHTML = bannerImages.map(item => `
-<div class="banner-card">
-<img src="${item.image}" class="banner-thumb" alt="${escapeHtml(item.title || 'banner')}">
-<div class="p-3">
-<input
-type="text"
-value="${escapeHtml(item.title || '')}"
-onchange="updateBannerTitle(${item.id}, this.value)"
-class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3"
-placeholder="Banner adı"
->
-<div class="flex items-center justify-between gap-2">
-<button onclick="toggleBannerStatus(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
-${item.active !== false ? 'Aktiv' : 'Passiv'}
-</button>
-<button onclick="removeBanner(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-600">
-Sil
-</button>
-</div>
-</div>
-</div>
-`).join('');
-}
-
 function autoSaveSettings(triggerSync = true) {
-const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
-settings = {
-nameAz: document.getElementById('rest-name-az')?.value || '',
-nameEn: document.getElementById('rest-name-en')?.value || '',
-phone: document.getElementById('rest-phone')?.value || '',
-email: document.getElementById('rest-email')?.value || '',
-addressAz: document.getElementById('rest-address-az')?.value || '',
-addressEn: document.getElementById('rest-address-en')?.value || '',
-workWeekday: document.getElementById('rest-work-weekday')?.value || '07:00 - 24:00',
-workWeekend: document.getElementById('rest-work-weekend')?.value || '07:00 - 24:00',
-facebook: document.getElementById('social-facebook')?.value || '',
-instagram: document.getElementById('social-instagram')?.value || '',
-whatsapp: document.getElementById('social-whatsapp')?.value || '',
-autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
-smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
-heroTitleAz: document.getElementById('hero-title-az')?.value || '',
-heroTitleEn: document.getElementById('hero-title-en')?.value || '',
-heroImage: currentHeroImage || '',
-headerImage: currentHeroImage || '',
-recommendedIds: JSON.stringify(recommendedIds),
-logo: currentLogo || '',
-logoUrl: currentLogo || '',
-popupEnabled: !!document.getElementById('popup-enabled')?.checked,
-popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
-popupTitle: document.getElementById('popup-title')?.value || '',
-popupText: document.getElementById('popup-text')?.value || '',
-popupLink: document.getElementById('popup-link')?.value || '',
-popupImage: currentPopupImage || '',
-adImage: currentPopupImage || '',
-bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
-bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
-bannerTitle: document.getElementById('banner-title')?.value || '',
-bannerImages: bannerImages,
-bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
-bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(',')
-};
-saveLocalState();
-if (triggerSync) debouncedSync();
+  const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
+  settings = {
+    nameAz: document.getElementById('rest-name-az')?.value || '',
+    nameEn: document.getElementById('rest-name-en')?.value || '',
+    phone: document.getElementById('rest-phone')?.value || '',
+    email: document.getElementById('rest-email')?.value || '',
+    addressAz: document.getElementById('rest-address-az')?.value || '',
+    addressEn: document.getElementById('rest-address-en')?.value || '',
+    workWeekday: document.getElementById('rest-work-weekday')?.value || '07:00 - 24:00',
+    workWeekend: document.getElementById('rest-work-weekend')?.value || '07:00 - 24:00',
+    facebook: document.getElementById('social-facebook')?.value || '',
+    instagram: document.getElementById('social-instagram')?.value || '',
+    whatsapp: document.getElementById('social-whatsapp')?.value || '',
+    autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
+    smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
+    heroTitleAz: document.getElementById('hero-title-az')?.value || '',
+    heroTitleEn: document.getElementById('hero-title-en')?.value || '',
+    heroImage: currentHeroImage || '', headerImage: currentHeroImage || '',
+    recommendedIds: JSON.stringify(recommendedIds),
+    logo: currentLogo || '', logoUrl: currentLogo || '',
+    popupEnabled: !!document.getElementById('popup-enabled')?.checked,
+    popupShowOnce: !!document.getElementById('popup-show-once')?.checked,
+    popupTitle: document.getElementById('popup-title')?.value || '',
+    popupText: document.getElementById('popup-text')?.value || '',
+    popupLink: document.getElementById('popup-link')?.value || '',
+    popupImage: currentPopupImage || '', adImage: currentPopupImage || '',
+    bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
+    bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
+    bannerTitle: document.getElementById('banner-title')?.value || '',
+    bannerImages: bannerImages,
+    bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
+    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(',')
+  };
+  saveLocalState();
+  if (triggerSync) debouncedSync();
 }
-
 function loadSettings() {
-const savedSettings = JSON.parse(localStorage.getItem('settings') || '{}');
-if (document.getElementById('rest-name-az')) document.getElementById('rest-name-az').value = savedSettings.nameAz || '';
-if (document.getElementById('rest-name-en')) document.getElementById('rest-name-en').value = savedSettings.nameEn || '';
-if (document.getElementById('rest-phone')) document.getElementById('rest-phone').value = savedSettings.phone || '';
-if (document.getElementById('rest-email')) document.getElementById('rest-email').value = savedSettings.email || '';
-if (document.getElementById('rest-address-az')) document.getElementById('rest-address-az').value = savedSettings.addressAz || '';
-if (document.getElementById('rest-address-en')) document.getElementById('rest-address-en').value = savedSettings.addressEn || '';
-if (document.getElementById('rest-work-weekday')) document.getElementById('rest-work-weekday').value = savedSettings.workWeekday || '07:00 - 24:00';
-if (document.getElementById('rest-work-weekend')) document.getElementById('rest-work-weekend').value = savedSettings.workWeekend || '07:00 - 24:00';
-if (document.getElementById('social-facebook')) document.getElementById('social-facebook').value = savedSettings.facebook || '';
-if (document.getElementById('social-instagram')) document.getElementById('social-instagram').value = savedSettings.instagram || '';
-if (document.getElementById('social-whatsapp')) document.getElementById('social-whatsapp').value = savedSettings.whatsapp || '';
-if (document.getElementById('auto-translate-enabled')) document.getElementById('auto-translate-enabled').checked = savedSettings.autoTranslate !== undefined ? !!savedSettings.autoTranslate : true;
-if (document.getElementById('smart-search-enabled')) document.getElementById('smart-search-enabled').checked = String(savedSettings.smartSearchBadge || 'true') === 'true';
-if (document.getElementById('hero-title-az')) document.getElementById('hero-title-az').value = savedSettings.heroTitleAz || '';
-if (document.getElementById('hero-title-en')) document.getElementById('hero-title-en').value = savedSettings.heroTitleEn || '';
-if (document.getElementById('popup-enabled')) document.getElementById('popup-enabled').checked = !!savedSettings.popupEnabled;
-if (document.getElementById('popup-show-once')) document.getElementById('popup-show-once').checked = !!savedSettings.popupShowOnce;
-if (document.getElementById('popup-title')) document.getElementById('popup-title').value = savedSettings.popupTitle || '';
-if (document.getElementById('popup-text')) document.getElementById('popup-text').value = savedSettings.popupText || '';
-if (document.getElementById('popup-link')) document.getElementById('popup-link').value = savedSettings.popupLink || '';
-if (document.getElementById('banner-enabled')) document.getElementById('banner-enabled').checked = !!savedSettings.bannerEnabled;
-if (document.getElementById('banner-interval')) document.getElementById('banner-interval').value = safeNumber(savedSettings.bannerInterval, 3000);
-if (document.getElementById('banner-title')) document.getElementById('banner-title').value = savedSettings.bannerTitle || '';
-
-if (savedSettings.logo) {
-currentLogo = savedSettings.logo;
-document.getElementById('logo-image').src = currentLogo;
-document.getElementById('logo-image').classList.remove('hidden');
-document.getElementById('logo-placeholder').classList.add('hidden');
-}
-if (savedSettings.heroImage) {
-currentHeroImage = savedSettings.heroImage;
-document.getElementById('hero-image-preview').src = currentHeroImage;
-document.getElementById('hero-image-preview').classList.remove('hidden');
-document.getElementById('hero-image-placeholder').classList.add('hidden');
-}
-if (savedSettings.popupImage) {
-currentPopupImage = savedSettings.popupImage;
-document.getElementById('popup-image-preview').src = currentPopupImage;
-document.getElementById('popup-image-preview').classList.remove('hidden');
-document.getElementById('popup-image-placeholder').classList.add('hidden');
-}
-bannerImages = Array.isArray(savedSettings.bannerImages) ? savedSettings.bannerImages : [];
-renderBannerList();
+  const s = JSON.parse(localStorage.getItem('settings') || '{}');
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  const setChk = (id, val, def = true) => { const el = document.getElementById(id); if (el) el.checked = val !== undefined ? !!val : def; };
+  set('rest-name-az', s.nameAz); set('rest-name-en', s.nameEn); set('rest-phone', s.phone); set('rest-email', s.email);
+  set('rest-address-az', s.addressAz); set('rest-address-en', s.addressEn);
+  set('rest-work-weekday', s.workWeekday || '07:00 - 24:00'); set('rest-work-weekend', s.workWeekend || '07:00 - 24:00');
+  set('social-facebook', s.facebook); set('social-instagram', s.instagram); set('social-whatsapp', s.whatsapp);
+  set('hero-title-az', s.heroTitleAz); set('hero-title-en', s.heroTitleEn);
+  set('popup-title', s.popupTitle); set('popup-text', s.popupText); set('popup-link', s.popupLink);
+  set('banner-interval', s.bannerInterval || 3000); set('banner-title', s.bannerTitle);
+  setChk('auto-translate-enabled', s.autoTranslate, true);
+  setChk('smart-search-enabled', String(s.smartSearchBadge || 'true') === 'true', true);
+  setChk('popup-enabled', s.popupEnabled, false);
+  setChk('popup-show-once', s.popupShowOnce, false);
+  setChk('banner-enabled', s.bannerEnabled, false);
+  if (s.logo) { currentLogo = s.logo; document.getElementById('logo-image').src = currentLogo; document.getElementById('logo-image').classList.remove('hidden'); document.getElementById('logo-placeholder').classList.add('hidden'); }
+  if (s.heroImage) { currentHeroImage = s.heroImage; document.getElementById('hero-image-preview').src = currentHeroImage; document.getElementById('hero-image-preview').classList.remove('hidden'); document.getElementById('hero-image-placeholder').classList.add('hidden'); }
+  if (s.popupImage) { currentPopupImage = s.popupImage; document.getElementById('popup-image-preview').src = currentPopupImage; document.getElementById('popup-image-preview').classList.remove('hidden'); document.getElementById('popup-image-placeholder').classList.add('hidden'); }
+  bannerImages = Array.isArray(s.bannerImages) ? s.bannerImages : [];
+  renderBannerList();
 }
 
 // ============================================
-// DASHBOARD FUNCTIONS
+// DASHBOARD
 // ============================================
 function updateStats() {
-document.getElementById('stat-products').textContent = products.length;
-document.getElementById('stat-categories').textContent = categories.length;
-document.getElementById('stat-tables').textContent = tables.length;
-document.getElementById('stat-orders').textContent = orders.length;
-const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + '₼';
+  document.getElementById('stat-products').textContent = products.length;
+  document.getElementById('stat-categories').textContent = categories.length;
+  document.getElementById('stat-tables').textContent = tables.length;
+  document.getElementById('stat-orders').textContent = orders.length;
+  const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+  document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + '₼';
 }
-
-function updateDashboard() {
-if (!weeklyChart) initCharts();
-renderRecentOrders();
-}
-
+function updateDashboard() { if (!weeklyChart) initCharts(); renderRecentOrders(); }
 function renderRecentOrders() {
-const container = document.getElementById('recent-orders');
-const recentOrders = orders.slice(0, 5);
-if (!recentOrders.length) {
-container.innerHTML = '<p class="text-gray-500 text-sm">Hələ sifariş yoxdur</p>';
-return;
+  const container = document.getElementById('recent-orders');
+  const recentOrders = orders.slice(0, 5);
+  if (!recentOrders.length) { container.innerHTML = '<p class="text-gray-500 text-sm">Hələ sifariş yoxdur</p>'; return; }
+  container.innerHTML = recentOrders.map(order => `
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <div>
+        <p class="font-medium text-gray-800">${escapeHtml(order.customer || 'Qonaq')}</p>
+        <p class="text-xs text-gray-500">${escapeHtml(order.tableName || '')} • ${new Date(order.createdAt).toLocaleDateString('az-AZ')}</p>
+      </div>
+      <span class="font-bold text-gray-800">${parseFloat(order.total || 0).toFixed(2)}₼</span>
+    </div>`).join('');
 }
-container.innerHTML = recentOrders.map(order => `
-<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-<div>
-<p class="font-medium text-gray-800">${escapeHtml(order.customer || 'Qonaq')}</p>
-<p class="text-xs text-gray-500">${escapeHtml(order.tableName || '')} • ${new Date(order.createdAt).toLocaleDateString('az-AZ')}</p>
-</div>
-<span class="font-bold text-gray-800">${parseFloat(order.total || 0).toFixed(2)}₼</span>
-</div>
-`).join('');
-}
-
 function initCharts() {
-const ctx = document.getElementById('weeklyOrdersChart');
-if (!ctx) return;
-if (weeklyChart) weeklyChart.destroy();
-weeklyChart = new Chart(ctx, {
-type: 'bar',
-data: {
-labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
-datasets: [{
-label: 'Sifarişlər',
-data: [12, 19, 15, 25, 22, 30, 28],
-backgroundColor: 'rgba(5, 150, 105, 0.6)',
-borderColor: '#059669',
-borderWidth: 2,
-borderRadius: 8
-}]
-},
-options: {
-responsive: true,
-maintainAspectRatio: false,
-plugins: { legend: { display:false } },
-scales: {
-y: { beginAtZero:true },
-x: { grid: { display:false } }
+  const ctx = document.getElementById('weeklyOrdersChart');
+  if (!ctx) return;
+  if (weeklyChart) weeklyChart.destroy();
+  weeklyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş', 'B'],
+      datasets: [{ label: 'Sifarişlər', data: [12, 19, 15, 25, 22, 30, 28], backgroundColor: 'rgba(5, 150, 105, 0.6)', borderColor: '#059669', borderWidth: 2, borderRadius: 8 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+  });
 }
-}
-});
-}
-
 function initApp() {
-products = (products || []).map(normalizeProduct);
-updateStats();
-renderCategories();
-renderProducts();
-renderTables();
-renderReservations();
-updateCategoryFilter();
-updateDashboard();
-initCharts();
-loadSettings();
+  products = (products || []).map(normalizeProduct);
+  updateStats(); renderCategories(); renderProducts(); renderTables(); renderReservations();
+  updateCategoryFilter(); updateDashboard(); initCharts(); loadSettings();
 }
 
 // ============================================
 // EVENT LISTENERS
 // ============================================
 document.addEventListener('change', function(e) {
-if (e.target && e.target.id === 'prod-available') {
-const label = document.getElementById('availability-label');
-if (e.target.checked) {
-label.textContent = 'Mövcuddur';
-label.classList.remove('text-red-600');
-label.classList.add('text-green-600');
-} else {
-label.textContent = 'Bitdi';
-label.classList.remove('text-green-600');
-label.classList.add('text-red-600');
-}
-}
+  if (e.target && e.target.id === 'prod-available') {
+    const label = document.getElementById('availability-label');
+    if (e.target.checked) { label.textContent = 'Mövcuddur'; label.classList.remove('text-red-600'); label.classList.add('text-green-600'); }
+    else { label.textContent = 'Bitdi'; label.classList.remove('text-green-600'); label.classList.add('text-red-600'); }
+  }
 });
-
-window.onclick = function(event) {
-if (event.target.classList.contains('modal')) {
-event.target.classList.remove('active');
-}
-};
+window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
 </script>
 </body>
 </html>
