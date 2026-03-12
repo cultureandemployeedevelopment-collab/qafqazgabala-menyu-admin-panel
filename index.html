@@ -1162,7 +1162,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxUm5JyEX0Ter24-0p74tJg01tBNBIs8T4Ohg8mwJPqMRnD74viCuD8w5eFtc2sW6eZRg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzVfLV_TMxBP8jX8P9CosMKC2DCM25--tk5h_lh3U4ZBl_QiB1N6D1J_qpHsGDYA9hyAQ/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1739,14 +1739,14 @@ async function handleVideoFileInput(input) {
     const base64Video = ev.target.result;
     const uploadedUrl = await uploadVideoToDrive(base64Video, `product_video_${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
     if (!uploadedUrl) { alert('Video yüklənmədi. Yenidən cəhd edin.'); clearVideo(); return; }
-    document.getElementById('prod-video-url').value = uploadedUrl;
+    // video removed
     currentProductVideo = uploadedUrl;
     updateVideoPreview();
   };
   reader.readAsDataURL(file);
 }
 function updateVideoPreview() {
-  const videoUrl = document.getElementById('prod-video-url').value.trim();
+  const videoUrl = '';
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
   if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
@@ -1755,7 +1755,7 @@ function updateVideoPreview() {
   previewContainer.classList.remove('hidden');
 }
 function clearVideo() {
-  document.getElementById('prod-video-url').value = '';
+  // video removed
   const fileInput = document.getElementById('prod-video-file');
   if (fileInput) fileInput.value = '';
   document.getElementById('video-preview-container').classList.add('hidden');
@@ -1838,8 +1838,8 @@ function openProductModal(productId = null) {
   });
   document.getElementById('prod-category').value = '';
   document.getElementById('prod-time').value = '3min';
-  document.getElementById('prod-video-url').value = '';
-  document.getElementById('prod-video-file').value = '';
+  // video removed
+  // video removed
   document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
@@ -2555,9 +2555,18 @@ function renderBannerList() {
   if (!list || !empty) return;
   if (!bannerImages.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
-  list.innerHTML = bannerImages.map(item => `
+  list.innerHTML = bannerImages.map(item => {
+    // Find matching product for like count
+    const prod = item.productId ? products.find(p => String(p.id) === String(item.productId)) : null;
+    return `
     <div class="banner-card">
-      <img src="${item.image || ''}" class="banner-thumb" alt="${escapeHtml(item.productName || item.title || 'banner')}" onerror="this.style.background='#f3f4f6'">
+      <div style="position:relative;">
+        <img src="${item.image || ''}" class="banner-thumb" alt="${escapeHtml(item.productName || item.title || 'banner')}" onerror="this.style.background='#f3f4f6'">
+        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,.7),transparent);padding:14px 8px 6px;color:#fff;font-size:11px;">
+          <span style="font-weight:700;">${escapeHtml(item.productName || item.title || '')}</span>
+          ${item.price ? `<span style="color:#d4b86a;margin-left:4px;">${escapeHtml(String(item.price))} ₼</span>` : ''}
+        </div>
+      </div>
       <div class="p-3 space-y-2">
         <div class="flex items-center gap-1">
           <span class="text-xs font-semibold text-gray-500">Ad:</span>
@@ -2572,7 +2581,8 @@ function renderBannerList() {
           <button onclick="removeBanner(${item.id})" class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-600"><i class="fas fa-trash"></i></button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function autoSaveSettings(triggerSync = true) {
   const recommendedIds = products.filter(p => p.recommended).map(p => p.id);
