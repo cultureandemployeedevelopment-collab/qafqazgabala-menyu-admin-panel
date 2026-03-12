@@ -466,12 +466,16 @@ Daxil ol
 <textarea id="rest-address-en" rows="2" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()"></textarea>
 </div>
 <div>
-<label class="block text-xs font-medium text-gray-500 mb-2">Həftəiçi</label>
-<input type="text" id="rest-work-weekday" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+<label class="block text-xs font-medium text-gray-500 mb-2">🕐 İş saatları (hər gün ayrı)</label>
+<div class="space-y-2">
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">B.ertəsi</span><input type="text" id="work-mon" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">Ç.axşamı</span><input type="text" id="work-tue" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">Çərşənbə</span><input type="text" id="work-wed" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">C.axşamı</span><input type="text" id="work-thu" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">Cümə</span><input type="text" id="work-fri" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">Şənbə</span><input type="text" id="work-sat" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
+<div class="flex items-center gap-2"><span class="text-xs w-24 flex-shrink-0 text-gray-600">Bazar</span><input type="text" id="work-sun" placeholder="07:00 - 24:00" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" onchange="autoSaveSettings()"></div>
 </div>
-<div>
-<label class="block text-xs font-medium text-gray-500 mb-2">Həftəsonu</label>
-<input type="text" id="rest-work-weekend" value="07:00 - 24:00" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
 </div>
 <div>
 <label class="block text-xs font-medium text-gray-500 mb-2">Restoran Haqqında (Açıqlama)</label>
@@ -496,8 +500,16 @@ Daxil ol
 <input type="text" id="social-instagram" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
 </div>
 <div>
+<label class="block text-xs font-medium text-gray-500 mb-2">TripAdvisor</label>
+<input type="text" id="social-tripadvisor" class="w-full px-4 py-2 rounded-lg border border-gray-200" placeholder="https://tripadvisor.com/..." onchange="autoSaveSettings()">
+</div>
+<div>
 <label class="block text-xs font-medium text-gray-500 mb-2">WhatsApp</label>
 <input type="text" id="social-whatsapp" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+</div>
+<div>
+<label class="block text-xs font-medium text-gray-500 mb-2">🗺️ Xəritə Linki (Google Maps URL)</label>
+<input type="text" id="rest-maplink" class="w-full px-4 py-2 rounded-lg border border-gray-200" placeholder="https://maps.google.com/..." onchange="autoSaveSettings()">
 </div>
 <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
 <div>
@@ -625,6 +637,39 @@ Daxil ol
 Hələ banner əlavə edilməyib.
 </div>
 </div>
+</div>
+
+<!-- REVIEW / FEEDBACK SECTION -->
+<div class="bg-white rounded-2xl p-6 shadow-sm lg:col-span-2">
+<div class="flex items-center gap-2 mb-6">
+<div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+<i class="fas fa-star text-amber-500"></i>
+</div>
+<h4 class="font-semibold text-gray-800">Rəy / Feedback Bölməsi</h4>
+</div>
+<div class="space-y-4">
+<div class="switch-wrap bg-amber-50">
+<div>
+<p class="text-sm font-medium text-gray-800">Rəy bölməsi aktiv olsun</p>
+<p class="text-xs text-gray-500">Home ekranında "Linklər" altında göstərilsin</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input type="checkbox" id="review-enabled" class="sr-only peer" checked onchange="autoSaveSettings()">
+<div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+</label>
+</div>
+<div>
+<label class="block text-xs font-medium text-gray-500 mb-2">Rəy başlığı</label>
+<input type="text" id="review-title" value="Bizə daha yaxşı olmağa kömək et!" class="w-full px-4 py-2 rounded-lg border border-gray-200" onchange="autoSaveSettings()">
+</div>
+<div>
+<label class="block text-xs font-medium text-gray-500 mb-2">Xarici feedback linki (isteğe bağlı)</label>
+<input type="text" id="review-link" class="w-full px-4 py-2 rounded-lg border border-gray-200" placeholder="https://g.page/r/..." onchange="autoSaveSettings()">
+<p class="text-xs text-gray-400 mt-1">Google Reviews, TripAdvisor və ya digər link</p>
+</div>
+</div>
+</div>
+
 </div>
 </div>
 </div>
@@ -765,29 +810,25 @@ Hələ banner əlavə edilməyib.
 </div>
 </div>
 
-<!-- VIDEO SECTION -->
-<div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+<!-- GIF SECTION -->
+<div class="bg-purple-50 rounded-xl p-4 border border-purple-100">
 <div class="flex items-center gap-2 mb-3">
-<i class="fas fa-video text-blue-600"></i>
-<label class="block text-sm font-medium text-gray-700">Yemək Videosu</label>
+<span style="font-size:18px;">🎞️</span>
+<label class="block text-sm font-medium text-gray-700">Yemək GIF-i</label>
+<span class="text-xs text-purple-500">(Yeməyə toxunanda ilk göstərilir)</span>
 </div>
 <div class="flex gap-2 mb-3">
-<input type="file" id="prod-video-file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white" onchange="handleVideoFileInput(this)">
-<input type="hidden" id="prod-video-url">
-<button type="button" onclick="clearVideo()" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
+<input type="file" id="prod-gif-file" accept="image/gif" class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white" onchange="handleGifFileInput(this)">
+<input type="hidden" id="prod-gif-url">
+<button type="button" onclick="clearGif()" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
 <i class="fas fa-trash"></i>
 </button>
 </div>
-<p class="text-xs text-gray-500 mb-2">Video fayl yükləyin (MP4, WebM, MOV). Link əlavə etmək tələb olunmur.</p>
-<div id="video-preview-container" class="hidden">
-<div class="video-preview-container">
-<video id="video-preview-player" controls poster="">
-<source src="" type="video/mp4">
-Brauzeriniz video tag-ni dəstəkləmir.
-</video>
-<button type="button" class="remove-video-btn" onclick="clearVideo()">
-<i class="fas fa-times"></i>
-</button>
+<p class="text-xs text-gray-500 mb-2">GIF fayl yükləyin. Yemək məlumatı açılanda birinci GIF animasiyası göstərilir.</p>
+<div id="gif-preview-container" class="hidden mt-2">
+<div class="relative inline-block">
+<img id="gif-preview-img" src="" alt="GIF" style="max-width:180px;max-height:120px;border-radius:10px;border:2px solid #d8b4fe;">
+<button type="button" class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center" onclick="clearGif()">✕</button>
 </div>
 </div>
 </div>
@@ -1045,7 +1086,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwZXBfNK7LYkGdMsGyq0IpN2iwQ3KQNZgS-hTaanhEIYXWTam_PPhX0VuOpWVnkxUeexg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx2ZjVuv-IQ0H50AosY_XzwFFOxtcq9ZOyNovKflCY-wVPLe6bg7kqSsFCQiul4HQxJbA/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1167,6 +1208,7 @@ function normalizeProduct(product = {}) {
   if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
   if (normalized.ingredientsAz === undefined) normalized.ingredientsAz = '';
   if (normalized.ingredientsEn === undefined) normalized.ingredientsEn = '';
+  if (normalized.gifUrl === undefined) normalized.gifUrl = '';
   return normalized;
 }
 
@@ -1606,6 +1648,38 @@ function clearVideo() {
   document.getElementById('video-preview-container').classList.add('hidden');
   currentProductVideo = '';
 }
+
+// ============================================
+// GIF FUNCTIONS
+// ============================================
+let currentProductGif = '';
+async function handleGifFileInput(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type.includes('gif')) { alert('Zəhmət olmasa GIF faylı seçin'); input.value = ''; return; }
+  if (file.size > 10 * 1024 * 1024) { alert('GIF ölçüsü 10MB-dan çox ola bilməz'); input.value = ''; return; }
+  showSyncIndicator('GIF yüklənir...', 'loading');
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    const uploadedUrl = await uploadImageToDrive(ev.target.result, 'product_gif_' + Date.now() + '.gif');
+    if (!uploadedUrl) { alert('GIF yüklənmədi.'); clearGif(); return; }
+    document.getElementById('prod-gif-url').value = uploadedUrl;
+    currentProductGif = uploadedUrl;
+    document.getElementById('gif-preview-img').src = uploadedUrl;
+    document.getElementById('gif-preview-container').classList.remove('hidden');
+    showSyncIndicator('GIF yükləndi!', 'success');
+    setTimeout(hideSyncIndicator, 1200);
+  };
+  reader.readAsDataURL(file);
+}
+function clearGif() {
+  currentProductGif = '';
+  document.getElementById('prod-gif-url').value = '';
+  const fi = document.getElementById('prod-gif-file'); if(fi) fi.value = '';
+  document.getElementById('gif-preview-container').classList.add('hidden');
+  document.getElementById('gif-preview-img').src = '';
+}
+
 function openVideoModal(videoUrl) {
   if (!videoUrl) return;
   const modal = document.getElementById('video-modal');
@@ -1646,7 +1720,7 @@ function openProductModal(productId = null) {
   currentProductImages = [];
   currentProductVideo = '';
   document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
-  ['prod-name-az','prod-name-en','prod-desc-az','prod-desc-en','prod-ingred-az','prod-ingred-en','prod-price','prod-volume','prod-vat'].forEach(id => {
+  currentProductGif = ''; ['prod-name-az','prod-name-en','prod-desc-az','prod-desc-en','prod-ingred-az','prod-ingred-en','prod-price','prod-volume','prod-vat','prod-gif-url'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('prod-category').value = '';
@@ -1662,6 +1736,7 @@ function openProductModal(productId = null) {
   document.getElementById('availability-label').classList.remove('text-red-600');
   document.getElementById('availability-label').classList.add('text-green-600');
   document.getElementById('image-preview').innerHTML = '';
+  clearGif();
 
   const catSelect = document.getElementById('prod-category');
   catSelect.innerHTML = '<option value="">Seçin...</option>';
@@ -1687,6 +1762,12 @@ function openProductModal(productId = null) {
       if (product.videoUrl) { document.getElementById('prod-video-url').value = product.videoUrl; currentProductVideo = product.videoUrl; updateVideoPreview(); }
       document.getElementById('prod-ingred-az').value = product.ingredientsAz || '';
       document.getElementById('prod-ingred-en').value = product.ingredientsEn || '';
+      if (product.gifUrl) {
+        currentProductGif = product.gifUrl;
+        document.getElementById('prod-gif-url').value = product.gifUrl;
+        document.getElementById('gif-preview-img').src = product.gifUrl;
+        document.getElementById('gif-preview-container').classList.remove('hidden');
+      } else { clearGif(); }
       if (product.available === false) {
         document.getElementById('availability-label').textContent = 'Bitdi';
         document.getElementById('availability-label').classList.remove('text-green-600');
@@ -1803,6 +1884,7 @@ async function saveProduct() {
     specs: { volume: document.getElementById('prod-volume').value.trim(), time: document.getElementById('prod-time').value.trim() },
     ingredientsAz: ingredientsAz,
     ingredientsEn: ingredientsEn,
+    gifUrl: currentProductGif || '',
     vat: document.getElementById('prod-vat').value.trim(),
     popular: document.getElementById('prod-popular').checked,
     isNew: document.getElementById('prod-new').checked,
@@ -2265,6 +2347,8 @@ function autoSaveSettings(triggerSync = true) {
     facebook: document.getElementById('social-facebook')?.value || '',
     instagram: document.getElementById('social-instagram')?.value || '',
     whatsapp: document.getElementById('social-whatsapp')?.value || '',
+    tripadvisor: document.getElementById('social-tripadvisor')?.value || '',
+    mapLink: document.getElementById('rest-maplink')?.value || '',
     autoTranslate: !!document.getElementById('auto-translate-enabled')?.checked,
     smartSearchBadge: document.getElementById('smart-search-enabled')?.checked ? 'true' : 'false',
     heroTitleAz: document.getElementById('hero-title-az')?.value || '',
@@ -2283,7 +2367,10 @@ function autoSaveSettings(triggerSync = true) {
     bannerTitle: document.getElementById('banner-title')?.value || '',
     bannerImages: bannerImages,
     bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
-    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(',')
+    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(','),
+    reviewEnabled: !!document.getElementById('review-enabled')?.checked,
+    reviewTitle: document.getElementById('review-title')?.value || 'Bizə daha yaxşı olmağa kömək et!',
+    reviewLink: document.getElementById('review-link')?.value || ''
   };
   saveLocalState();
   if (triggerSync) debouncedSync();
@@ -2297,6 +2384,7 @@ function loadSettings() {
   set('rest-work-weekday', s.workWeekday || '07:00 - 24:00'); set('rest-work-weekend', s.workWeekend || '07:00 - 24:00');
   set('rest-description', s.description); set('rest-website', s.website);
   set('social-facebook', s.facebook); set('social-instagram', s.instagram); set('social-whatsapp', s.whatsapp);
+  set('social-tripadvisor', s.tripadvisor); set('rest-maplink', s.mapLink);
   set('hero-title-az', s.heroTitleAz); set('hero-title-en', s.heroTitleEn);
   set('popup-title', s.popupTitle); set('popup-text', s.popupText); set('popup-link', s.popupLink);
   set('banner-interval', s.bannerInterval || 3000); set('banner-title', s.bannerTitle);
@@ -2310,6 +2398,9 @@ function loadSettings() {
   if (s.popupImage) { currentPopupImage = s.popupImage; document.getElementById('popup-image-preview').src = currentPopupImage; document.getElementById('popup-image-preview').classList.remove('hidden'); document.getElementById('popup-image-placeholder').classList.add('hidden'); }
   bannerImages = Array.isArray(s.bannerImages) ? s.bannerImages : [];
   renderBannerList();
+  setChk('review-enabled', s.reviewEnabled, true);
+  set('review-title', s.reviewTitle || 'Bizə daha yaxşı olmağa kömək et!');
+  set('review-link', s.reviewLink || '');
 }
 
 // ============================================
