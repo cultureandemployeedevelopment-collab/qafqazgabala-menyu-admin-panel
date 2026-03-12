@@ -280,9 +280,14 @@ Daxil ol
 <h3 class="text-2xl font-bold text-gray-800">Kateqoriyalar</h3>
 <p class="text-sm text-gray-500 mt-1"><span id="category-count">0</span> kateqoriya</p>
 </div>
-<button onclick="openCategoryModal()" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-<i class="fas fa-plus"></i> Yeni Kateqoriya
+<div class="flex gap-2">
+<button onclick="openCategoryModal(null, false)" class="bg-green-900 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+<i class="fas fa-plus"></i> Əsas Başlıq
 </button>
+<button onclick="openCategoryModal(null, true)" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+<i class="fas fa-plus"></i> Alt Başlıq
+</button>
+</div>
 </div>
 <div class="mb-6">
 <div class="relative">
@@ -590,11 +595,11 @@ Daxil ol
 </div>
 <h4 class="font-semibold text-gray-800">Banner Slider</h4>
 </div>
-<button type="button" onclick="document.getElementById('banner-images-input').click()" class="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm">
+<button type="button" onclick="openBannerAddModal()" class="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm">
 <i class="fas fa-plus mr-2"></i>Banner əlavə et
 </button>
 </div>
-<input type="file" id="banner-images-input" class="hidden" accept="image/*" multiple onchange="handleBannerFiles(this.files)">
+<input type="file" id="banner-images-input" class="hidden" accept="image/*" onchange="handleBannerFileQuick(this)">
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 <div class="switch-wrap bg-sky-50">
 <div>
@@ -624,6 +629,48 @@ Hələ banner əlavə edilməyib.
 </div>
 </div>
 </main>
+</div>
+</div>
+
+
+<!-- BANNER ADD MODAL -->
+<div id="banner-add-modal" class="modal">
+<div class="modal-content max-w-lg">
+<div class="p-6 border-b border-gray-100 flex justify-between items-center">
+<h3 class="text-xl font-bold text-gray-800">Banner Əlavə Et</h3>
+<button onclick="closeBannerAddModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+</div>
+<div class="p-6 space-y-5">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı <span class="text-gray-400 text-xs">(menyuda göstəriləcək)</span></label>
+<input type="text" id="bnr-name" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məs: Lülə kabab">
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼) <span class="text-gray-400 text-xs">(bannerdə göstəriləcək)</span></label>
+<input type="number" id="bnr-price" step="0.01" min="0" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məs: 12.50">
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-2">Şəkil *</label>
+<div class="w-full h-40 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer" onclick="document.getElementById('bnr-img-input').click()" id="bnr-img-preview-wrap">
+<img id="bnr-img-preview" src="" class="w-full h-full object-cover hidden" alt="">
+<div id="bnr-img-placeholder" class="text-center text-gray-400">
+<i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+<div class="text-sm">Şəkil seçin</div>
+</div>
+</div>
+<input type="file" id="bnr-img-input" class="hidden" accept="image/*" onchange="onBnrImgSelect(this)">
+<div id="bnr-img-progress" class="hidden mt-2">
+<div class="flex justify-between text-xs text-gray-600 mb-1"><span>Yüklənir...</span><span id="bnr-img-pct">0%</span></div>
+<div class="progress-bar"><div class="progress-bar-fill" id="bnr-img-pfill" style="width:0%"></div></div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+<button onclick="closeBannerAddModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
+<button onclick="saveBannerItem()" class="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 flex items-center gap-2">
+<i class="fas fa-save"></i> Əlavə et
+</button>
+</div>
 </div>
 </div>
 
@@ -663,11 +710,30 @@ Hələ banner əlavə edilməyib.
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 <div>
 <label class="block text-sm font-medium text-gray-700 mb-2">Təsvir (AZ)</label>
-<textarea id="prod-desc-az" rows="4" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+<textarea id="prod-desc-az" rows="3" oninput="handleProductFieldInput('desc','az', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
 </div>
 <div>
 <label class="block text-sm font-medium text-gray-700 mb-2">Description (EN)</label>
-<textarea id="prod-desc-en" rows="4" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+<textarea id="prod-desc-en" rows="3" oninput="handleProductFieldInput('desc','en', this.value)" class="w-full px-4 py-3 rounded-lg border border-gray-200"></textarea>
+</div>
+</div>
+
+<!-- İNQREDİYENTLƏR -->
+<div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
+<div class="flex items-center gap-2 mb-3">
+<i class="fas fa-leaf text-amber-600"></i>
+<label class="block text-sm font-medium text-gray-700">İnqrediyentlər / Tərkib</label>
+<span class="text-xs text-gray-400">(Axtarışda istifadə olunur)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-medium text-gray-500 mb-2">İnqrediyentlər (AZ)</label>
+<textarea id="prod-ingred-az" rows="2" oninput="handleProductFieldInput('ingred','az', this.value)" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Məs: toyuq, bibər, soğan, zeytun yağı..."></textarea>
+</div>
+<div>
+<label class="block text-xs font-medium text-gray-500 mb-2">Ingredients (EN)</label>
+<textarea id="prod-ingred-en" rows="2" oninput="handleProductFieldInput('ingred','en', this.value)" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="E.g: chicken, pepper, onion, olive oil..."></textarea>
+</div>
 </div>
 </div>
 
@@ -835,7 +901,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 <label class="block text-sm font-medium text-gray-700 mb-2">Sıra nömrəsi</label>
 <input type="number" id="cat-sort" value="0" class="w-full px-4 py-2 rounded-lg border border-gray-200">
 </div>
-<div>
+<div id="cat-parent-wrap">
 <label class="block text-sm font-medium text-gray-700 mb-2">Əsas kateqoriya (alt kateqoriyadırsa seçin)</label>
 <select id="cat-parent" class="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white">
 <option value="">— Yoxdur (Əsas kateqoriya) —</option>
@@ -979,7 +1045,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxthfm9840TpThBg7o0M2QOFTxd8nQFq7SXZUA0NTis7qO3DH_hauY3i6JhCF1zLzW61A/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwZXBfNK7LYkGdMsGyq0IpN2iwQ3KQNZgS-hTaanhEIYXWTam_PPhX0VuOpWVnkxUeexg/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1099,6 +1165,8 @@ function normalizeProduct(product = {}) {
   normalized.imageUrl = normalized.images[0] || normalized.imageUrl || '';
   if (!normalized.nameEn && normalized.nameAz) normalized.nameEn = normalized.nameAz;
   if (!normalized.descEn && normalized.descAz) normalized.descEn = normalized.descAz;
+  if (normalized.ingredientsAz === undefined) normalized.ingredientsAz = '';
+  if (normalized.ingredientsEn === undefined) normalized.ingredientsEn = '';
   return normalized;
 }
 
@@ -1373,9 +1441,12 @@ function showPage(pageName) {
 // ============================================
 // CATEGORY FUNCTIONS
 // ============================================
-function openCategoryModal(categoryId = null) {
+function openCategoryModal(categoryId = null, isSubMode = false) {
   editingCategoryId = categoryId;
-  document.getElementById('category-modal-title').textContent = categoryId ? 'Kateqoriyanı Redaktə Et' : 'Yeni Kateqoriya';
+  const isSub = isSubMode || (categoryId && categories.find(c => Number(c.id) === Number(categoryId))?.parentCategoryId);
+  document.getElementById('category-modal-title').textContent = categoryId
+    ? (isSub ? 'Alt Başlığı Redaktə Et' : 'Əsas Başlığı Redaktə Et')
+    : (isSub ? 'Yeni Alt Başlıq' : 'Yeni Əsas Başlıq');
   document.getElementById('cat-name-az').value = '';
   document.getElementById('cat-icon').value = '🍽️';
   document.getElementById('cat-sort').value = '0';
@@ -1383,11 +1454,16 @@ function openCategoryModal(categoryId = null) {
   document.querySelectorAll('#icon-selector button').forEach(btn => btn.classList.remove('border-green-900', 'bg-green-50'));
   // Populate parent selector (only parent cats, not sub-cats)
   const parentSel = document.getElementById('cat-parent');
+  const parentWrap = document.getElementById('cat-parent-wrap');
   if (parentSel) {
     const parentCats = categories.filter(c => !c.parentCategoryId && (!categoryId || Number(c.id) !== Number(categoryId)));
     parentSel.innerHTML = '<option value="">— Yoxdur (Əsas kateqoriya) —</option>' +
       parentCats.map(c => `<option value="${c.id}">${escapeHtml(c.nameAz)}</option>`).join('');
     parentSel.value = '';
+    // Alt başlıq modunda parent wrap-ı göstər, əsas başlıqda gizlət
+    if (parentWrap) {
+      parentWrap.style.display = isSub ? 'block' : 'none';
+    }
   }
   if (categoryId) {
     const cat = categories.find(c => Number(c.id) === Number(categoryId));
@@ -1397,7 +1473,10 @@ function openCategoryModal(categoryId = null) {
       document.getElementById('cat-sort').value = cat.sortOrder || 0;
       selectIcon(cat.icon || '🍽️');
       if (cat.nameEn) { document.getElementById('cat-translation-box').classList.remove('hidden'); document.getElementById('cat-translated-text').textContent = cat.nameEn; }
-      if (parentSel && cat.parentCategoryId) parentSel.value = cat.parentCategoryId;
+      if (parentSel && cat.parentCategoryId) {
+        parentSel.value = cat.parentCategoryId;
+        if (parentWrap) parentWrap.style.display = 'block';
+      }
     }
   }
   document.getElementById('category-modal').classList.add('active');
@@ -1551,7 +1630,7 @@ function handleProductFieldInput(fieldType, lang, value) {
   clearTimeout(productTranslateTimer);
   productTranslateTimer = setTimeout(async () => {
     const cleanValue = (value || '').trim();
-    const targetIdMap = { name: { az: 'prod-name-en', en: 'prod-name-az' }, desc: { az: 'prod-desc-en', en: 'prod-desc-az' } };
+    const targetIdMap = { name: { az: 'prod-name-en', en: 'prod-name-az' }, desc: { az: 'prod-desc-en', en: 'prod-desc-az' }, ingred: { az: 'prod-ingred-en', en: 'prod-ingred-az' } };
     const targetElement = document.getElementById(targetIdMap[fieldType][lang]);
     if (!targetElement) return;
     if (!cleanValue) { isProductAutoTranslating = true; targetElement.value = ''; isProductAutoTranslating = false; return; }
@@ -1567,7 +1646,7 @@ function openProductModal(productId = null) {
   currentProductImages = [];
   currentProductVideo = '';
   document.getElementById('product-modal-title').textContent = productId ? 'Məhsulu Redaktə Et' : 'Yeni Məhsul';
-  ['prod-name-az','prod-name-en','prod-desc-az','prod-desc-en','prod-price','prod-volume','prod-vat'].forEach(id => {
+  ['prod-name-az','prod-name-en','prod-desc-az','prod-desc-en','prod-ingred-az','prod-ingred-en','prod-price','prod-volume','prod-vat'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('prod-category').value = '';
@@ -1606,6 +1685,8 @@ function openProductModal(productId = null) {
       document.getElementById('prod-recommended').checked = !!product.recommended;
       document.getElementById('prod-available').checked = product.available !== false;
       if (product.videoUrl) { document.getElementById('prod-video-url').value = product.videoUrl; currentProductVideo = product.videoUrl; updateVideoPreview(); }
+      document.getElementById('prod-ingred-az').value = product.ingredientsAz || '';
+      document.getElementById('prod-ingred-en').value = product.ingredientsEn || '';
       if (product.available === false) {
         document.getElementById('availability-label').textContent = 'Bitdi';
         document.getElementById('availability-label').classList.remove('text-green-600');
@@ -1665,6 +1746,8 @@ async function saveProduct() {
   let nameEn = document.getElementById('prod-name-en').value.trim();
   const descAz = document.getElementById('prod-desc-az').value.trim();
   let descEn = document.getElementById('prod-desc-en').value.trim();
+  const ingredientsAz = document.getElementById('prod-ingred-az').value.trim();
+  let ingredientsEn = document.getElementById('prod-ingred-en').value.trim();
   const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
@@ -1674,6 +1757,7 @@ async function saveProduct() {
 
   if (!nameEn) { nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz; document.getElementById('prod-name-en').value = nameEn; }
   if (!descEn && descAz) { descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz; document.getElementById('prod-desc-en').value = descEn; }
+  if (!ingredientsEn && ingredientsAz) { ingredientsEn = await translateViaAppsScript(ingredientsAz, 'az', 'en') || ingredientsAz; document.getElementById('prod-ingred-en').value = ingredientsEn; }
 
   const progressDiv = document.getElementById('upload-progress');
   const totalImages = currentProductImages.length;
@@ -1717,6 +1801,8 @@ async function saveProduct() {
     imageUrl: uploadedImages[0] || '',
     videoUrl: videoUrl || '',
     specs: { volume: document.getElementById('prod-volume').value.trim(), time: document.getElementById('prod-time').value.trim() },
+    ingredientsAz: ingredientsAz,
+    ingredientsEn: ingredientsEn,
     vat: document.getElementById('prod-vat').value.trim(),
     popular: document.getElementById('prod-popular').checked,
     isNew: document.getElementById('prod-new').checked,
@@ -2083,6 +2169,61 @@ function updateBannerTitle(id, value) {
   const item = bannerImages.find(b => Number(b.id) === Number(id));
   if (item) { item.title = value || ''; autoSaveSettings(); }
 }
+function updateBannerField(id, field, value) {
+  const item = bannerImages.find(b => Number(b.id) === Number(id));
+  if (item) { item[field] = value || ''; autoSaveSettings(); }
+}
+
+let bnrTmpBase64 = null;
+function openBannerAddModal() {
+  bnrTmpBase64 = null;
+  document.getElementById('bnr-name').value = '';
+  document.getElementById('bnr-price').value = '';
+  document.getElementById('bnr-img-preview').src = '';
+  document.getElementById('bnr-img-preview').classList.add('hidden');
+  document.getElementById('bnr-img-placeholder').classList.remove('hidden');
+  document.getElementById('bnr-img-progress').classList.add('hidden');
+  document.getElementById('bnr-img-input').value = '';
+  document.getElementById('banner-add-modal').classList.add('active');
+}
+function closeBannerAddModal() { document.getElementById('banner-add-modal').classList.remove('active'); bnrTmpBase64 = null; }
+function onBnrImgSelect(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    bnrTmpBase64 = e.target.result;
+    document.getElementById('bnr-img-preview').src = bnrTmpBase64;
+    document.getElementById('bnr-img-preview').classList.remove('hidden');
+    document.getElementById('bnr-img-placeholder').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+async function saveBannerItem() {
+  const name = document.getElementById('bnr-name').value.trim();
+  const price = document.getElementById('bnr-price').value.trim();
+  if (!bnrTmpBase64) { alert('Zəhmət olmasa şəkil seçin'); return; }
+  document.getElementById('bnr-img-progress').classList.remove('hidden');
+  document.getElementById('bnr-img-pfill').style.width = '30%';
+  document.getElementById('bnr-img-pct').textContent = '30%';
+  const uploadedUrl = await uploadImageToDrive(bnrTmpBase64, 'banner_' + Date.now() + '.jpg');
+  document.getElementById('bnr-img-pfill').style.width = '100%';
+  document.getElementById('bnr-img-pct').textContent = '100%';
+  if (!uploadedUrl) { alert('Şəkil yüklənmədi!'); document.getElementById('bnr-img-progress').classList.add('hidden'); return; }
+  bannerImages.push({ id: Date.now(), image: uploadedUrl, productName: name, title: name, price: price, active: true });
+  renderBannerList(); autoSaveSettings();
+  closeBannerAddModal();
+  toast && toast('Banner əlavə edildi!');
+}
+function handleBannerFileQuick(input) {
+  // quick single-file add without modal (fallback)
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const url = await uploadImageToDrive(e.target.result, 'banner_' + Date.now() + '.jpg');
+    if (url) { bannerImages.push({ id: Date.now(), image: url, productName: '', price: '', active: true }); renderBannerList(); autoSaveSettings(); }
+  };
+  reader.readAsDataURL(file);
+}
 function renderBannerList() {
   const list = document.getElementById('banner-list');
   const empty = document.getElementById('banner-empty');
@@ -2091,12 +2232,19 @@ function renderBannerList() {
   empty.classList.add('hidden');
   list.innerHTML = bannerImages.map(item => `
     <div class="banner-card">
-      <img src="${item.image}" class="banner-thumb" alt="${escapeHtml(item.title || 'banner')}">
-      <div class="p-3">
-        <input type="text" value="${escapeHtml(item.title || '')}" onchange="updateBannerTitle(${item.id}, this.value)" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-3" placeholder="Banner adı">
-        <div class="flex items-center justify-between gap-2">
-          <button onclick="toggleBannerStatus(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${item.active !== false ? 'Aktiv' : 'Passiv'}</button>
-          <button onclick="removeBanner(${item.id})" class="px-3 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-600">Sil</button>
+      <img src="${item.image || ''}" class="banner-thumb" alt="${escapeHtml(item.productName || item.title || 'banner')}" onerror="this.style.background='#f3f4f6'">
+      <div class="p-3 space-y-2">
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-semibold text-gray-500">Ad:</span>
+          <input type="text" value="${escapeHtml(item.productName || item.title || '')}" onchange="updateBannerField(${item.id}, 'productName', this.value)" class="flex-1 px-2 py-1 rounded border border-gray-200 text-xs" placeholder="Yeməyin adı">
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-semibold text-gray-500">₼:</span>
+          <input type="text" value="${escapeHtml(String(item.price || ''))}" onchange="updateBannerField(${item.id}, 'price', this.value)" class="flex-1 px-2 py-1 rounded border border-gray-200 text-xs" placeholder="Qiymət">
+        </div>
+        <div class="flex items-center justify-between gap-2 pt-1">
+          <button onclick="toggleBannerStatus(${item.id})" class="px-2 py-1 rounded text-xs font-semibold ${item.active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${item.active !== false ? '✓ Aktiv' : '○ Passiv'}</button>
+          <button onclick="removeBanner(${item.id})" class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-600"><i class="fas fa-trash"></i></button>
         </div>
       </div>
     </div>`).join('');
