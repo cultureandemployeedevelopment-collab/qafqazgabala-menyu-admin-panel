@@ -1162,7 +1162,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzVfLV_TMxBP8jX8P9CosMKC2DCM25--tk5h_lh3U4ZBl_QiB1N6D1J_qpHsGDYA9hyAQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxoQt3BJjUCsohCIF1O0VWADBcTb97DSlgWJPJAg9IqH_rP8l_807M4JeoJtExMIuAN/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1948,9 +1948,34 @@ async function saveProduct() {
 
   if (!nameAz || !categoryId || !price) { alert('Vacib xanaları doldurun (Yeməyin adı, Kateqoriya, Qiymət)'); return; }
 
-  if (!nameEn) { nameEn = await translateViaAppsScript(nameAz, 'az', 'en') || nameAz; document.getElementById('prod-name-en').value = nameEn; }
-  if (!descEn && descAz) { descEn = await translateViaAppsScript(descAz, 'az', 'en') || descAz; document.getElementById('prod-desc-en').value = descEn; }
-  if (!ingredientsEn && ingredientsAz) { ingredientsEn = await translateViaAppsScript(ingredientsAz, 'az', 'en') || ingredientsAz; document.getElementById('prod-ingred-en').value = ingredientsEn; }
+  // Batch translate with timeout - non-blocking
+  if (!nameEn || (!descEn && descAz) || (!ingredientsEn && ingredientsAz)) {
+    try {
+      const toTranslate = [];
+      if (!nameEn) toTranslate.push({field:'name', text:nameAz});
+      if (!descEn && descAz) toTranslate.push({field:'desc', text:descAz});
+      if (!ingredientsEn && ingredientsAz) toTranslate.push({field:'ingr', text:ingredientsAz});
+      
+      // Parallel translate with 5s timeout
+      const results = await Promise.allSettled(toTranslate.map(t => 
+        Promise.race([
+          translateViaAppsScript(t.text, 'az', 'en'),
+          new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))
+        ])
+      ));
+      
+      toTranslate.forEach((t,i)=>{
+        const val = results[i].status==='fulfilled' ? (results[i].value||t.text) : t.text;
+        if(t.field==='name'){nameEn=val;document.getElementById('prod-name-en').value=nameEn;}
+        if(t.field==='desc'){descEn=val;document.getElementById('prod-desc-en').value=descEn;}
+        if(t.field==='ingr'){ingredientsEn=val;document.getElementById('prod-ingred-en').value=ingredientsEn;}
+      });
+    } catch(e) {
+      nameEn = nameEn || nameAz;
+      descEn = descEn || descAz;
+      ingredientsEn = ingredientsEn || ingredientsAz;
+    }
+  }
 
   const progressDiv = document.getElementById('upload-progress');
   const totalImages = currentProductImages.length;
