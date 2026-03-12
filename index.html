@@ -1162,7 +1162,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxoQt3BJjUCsohCIF1O0VWADBcTb97DSlgWJPJAg9IqH_rP8l_807M4JeoJtExMIuAN/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwVbLK6GsL6FTg9bLGvXNApFSl6GeNfSAmfZgpcgH658_RpzsqVnYwI6ELzfeuDc1TCXA/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1323,11 +1323,14 @@ async function translateViaAppsScript(text, source, target) {
 async function uploadImageToDrive(base64Image, fileName) {
   try {
     showSyncIndicator('Şəkil yüklənir...', 'loading');
+    const ctrl = new AbortController();
+    const uploadTimer = setTimeout(() => ctrl.abort(), 60000); // 60s timeout for large images
     const result = await postAppsScript('uploadImage', {
       image: base64Image,
       fileName: fileName || `image_${Date.now()}.jpg`,
       folderId: CONFIG.DRIVE_FOLDER_ID
-    });
+    }, ctrl.signal);
+    clearTimeout(uploadTimer);
     if (result.success) {
       showSyncIndicator('Şəkil yükləndi!', 'success');
       setTimeout(hideSyncIndicator, 1200);
@@ -1429,18 +1432,28 @@ function buildSyncPayload() {
       images: images,
       imagesJson: JSON.stringify(images),  // sadə string array: ["url1","url2"]
       imageUrl: images[0] || '',
-      videoUrl: videoUrl
+      videoUrl: ''
     };
   });
 
+  // Keep FULL banner objects (image + productId + productName + price + active)
   const cleanBannerImages = Array.isArray(cleanSettings.bannerImages)
-    ? cleanSettings.bannerImages.filter(item => item && item.image).map(item => item.image)
+    ? cleanSettings.bannerImages.filter(item => item && item.image).map(item => ({
+        id: item.id || Date.now(),
+        image: item.image || '',
+        title: item.title || '',
+        productId: item.productId || '',
+        productName: item.productName || item.title || '',
+        price: item.price || '',
+        active: item.active !== false
+      }))
     : [];
+  cleanSettings.bannerImages = cleanBannerImages;
   cleanSettings.logoUrl = cleanSettings.logo || '';
   cleanSettings.headerImage = cleanSettings.heroImage || '';
   cleanSettings.adImage = cleanSettings.popupImage || '';
   cleanSettings.bannerImagesJson = JSON.stringify(cleanBannerImages);
-  cleanSettings.bannerImageUrls = cleanBannerImages.join(',');
+  cleanSettings.bannerImageUrls = cleanBannerImages.map(b=>b.image).filter(Boolean).join(',');
 
   return {
     categories,
@@ -1936,46 +1949,24 @@ function viewImage(src) {
 // ============================================
 async function saveProduct() {
   const nameAz = document.getElementById('prod-name-az').value.trim();
-  let nameEn = document.getElementById('prod-name-en').value.trim();
+  let nameEn = document.getElementById('prod-name-en').value.trim() || nameAz;
   const descAz = document.getElementById('prod-desc-az').value.trim();
-  let descEn = document.getElementById('prod-desc-en').value.trim();
+  let descEn = document.getElementById('prod-desc-en').value.trim() || descAz;
   const ingredientsAz = document.getElementById('prod-ingred-az').value.trim();
-  let ingredientsEn = document.getElementById('prod-ingred-en').value.trim();
+  let ingredientsEn = document.getElementById('prod-ingred-en').value.trim() || ingredientsAz;
   const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
-  const videoUrl = '';
 
-  if (!nameAz || !categoryId || !price) { alert('Vacib xanaları doldurun (Yeməyin adı, Kateqoriya, Qiymət)'); return; }
+  if (!nameAz) { alert('Yeməyin adını (AZ) daxil edin'); return; }
+  if (!categoryId) { alert('Kateqoriya seçin'); return; }
+  if (!price) { alert('Qiyməti daxil edin'); return; }
 
-  // Batch translate with timeout - non-blocking
-  if (!nameEn || (!descEn && descAz) || (!ingredientsEn && ingredientsAz)) {
-    try {
-      const toTranslate = [];
-      if (!nameEn) toTranslate.push({field:'name', text:nameAz});
-      if (!descEn && descAz) toTranslate.push({field:'desc', text:descAz});
-      if (!ingredientsEn && ingredientsAz) toTranslate.push({field:'ingr', text:ingredientsAz});
-      
-      // Parallel translate with 5s timeout
-      const results = await Promise.allSettled(toTranslate.map(t => 
-        Promise.race([
-          translateViaAppsScript(t.text, 'az', 'en'),
-          new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))
-        ])
-      ));
-      
-      toTranslate.forEach((t,i)=>{
-        const val = results[i].status==='fulfilled' ? (results[i].value||t.text) : t.text;
-        if(t.field==='name'){nameEn=val;document.getElementById('prod-name-en').value=nameEn;}
-        if(t.field==='desc'){descEn=val;document.getElementById('prod-desc-en').value=descEn;}
-        if(t.field==='ingr'){ingredientsEn=val;document.getElementById('prod-ingred-en').value=ingredientsEn;}
-      });
-    } catch(e) {
-      nameEn = nameEn || nameAz;
-      descEn = descEn || descAz;
-      ingredientsEn = ingredientsEn || ingredientsAz;
-    }
-  }
+  // Show saving indicator
+  const saveBtn = document.querySelector('button[onclick="saveProduct()"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saxlanılır...'; }
+  showSyncIndicator('Məhsul saxlanılır...', 'loading');
+  try {
 
   const progressDiv = document.getElementById('upload-progress');
   const totalImages = currentProductImages.length;
@@ -2017,7 +2008,7 @@ async function saveProduct() {
     images: uploadedImages,           // sadə string array: ["url1","url2"]
     imagesJson: JSON.stringify(uploadedImages),  // şeetdə saxlanacaq format
     imageUrl: uploadedImages[0] || '',
-    videoUrl: videoUrl || '',
+    videoUrl: '',
     specs: { volume: document.getElementById('prod-volume').value.trim(), time: document.getElementById('prod-time').value.trim() },
     ingredientsAz: ingredientsAz,
     ingredientsEn: ingredientsEn,
@@ -2043,7 +2034,23 @@ async function saveProduct() {
   renderProducts();
   updateStats();
   updateDashboard();
-  await immediateSync();
+  // Restore button
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Saxla'; }
+  showSyncIndicator('Məhsul saxlandı!', 'success');
+  setTimeout(hideSyncIndicator, 2000);
+  // Sync in background - don't block UI
+  immediateSync().catch(e => {
+    console.warn('Sync error (non-blocking):', e);
+    showSyncIndicator('Yerli yadda saxlandı', 'warning');
+    setTimeout(hideSyncIndicator, 2000);
+  });
+  } catch(saveErr) {
+    console.error('saveProduct error:', saveErr);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Saxla'; }
+    showSyncIndicator('Xəta: ' + (saveErr.message || saveErr), 'error');
+    setTimeout(hideSyncIndicator, 4000);
+    alert('Məhsul saxlanarkən xəta: ' + (saveErr.message || saveErr));
+  }
 }
 
 function renderProducts() {
@@ -2643,9 +2650,17 @@ function autoSaveSettings(triggerSync = true) {
     bannerEnabled: !!document.getElementById('banner-enabled')?.checked,
     bannerInterval: safeNumber(document.getElementById('banner-interval')?.value, 3000),
     bannerTitle: document.getElementById('banner-title')?.value || '',
-    bannerImages: bannerImages,
-    bannerImagesJson: JSON.stringify((bannerImages || []).map(item => item?.image).filter(Boolean)),
-    bannerImageUrls: (bannerImages || []).map(item => item?.image).filter(Boolean).join(','),
+    bannerImages: (bannerImages || []).map(item => ({
+      id: item.id || Date.now(),
+      image: item.image || '',
+      title: item.title || '',
+      productId: item.productId || '',
+      productName: item.productName || item.title || '',
+      price: item.price || '',
+      active: item.active !== false
+    })),
+    bannerImagesJson: JSON.stringify((bannerImages || []).filter(b => b?.image).map(b => b.image)),
+    bannerImageUrls: (bannerImages || []).filter(b => b?.image).map(b => b.image).join(','),
     reviewEnabled: !!document.getElementById('review-enabled')?.checked,
     reviewTitle: document.getElementById('review-title')?.value || 'Bizə daha yaxşı olmağa kömək et!',
     reviewLink: document.getElementById('review-link')?.value || ''
