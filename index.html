@@ -205,6 +205,10 @@ Daxil ol
 <div onclick="showPage('reservations')" id="nav-reservations" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
 <i class="fas fa-calendar-check w-5"></i> Rezervasiyalar
 </div>
+<div onclick="showPage('reviews')" id="nav-reviews" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
+<i class="fas fa-star w-4 text-center"></i>
+<span>Rəylər</span>
+</div>
 <div onclick="showPage('settings')" id="nav-settings" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300">
 <i class="fas fa-cog w-5"></i> Parametrlər
 </div>
@@ -275,7 +279,7 @@ Daxil ol
 
 <!-- CATEGORIES -->
 <div id="page-categories" class="page-content hidden fade-in">
-<div class="flex justify-between items-center mb-6">
+<div class="flex justify-between items-center mb-4">
 <div>
 <h3 class="text-2xl font-bold text-gray-800">Kateqoriyalar</h3>
 <p class="text-sm text-gray-500 mt-1"><span id="category-count">0</span> kateqoriya</p>
@@ -287,15 +291,32 @@ Daxil ol
 <button onclick="openCategoryModal(null, true)" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
 <i class="fas fa-plus"></i> Alt Başlıq
 </button>
+<button onclick="deleteAllCategories()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+<i class="fas fa-trash"></i> Hamısını Sil
+</button>
 </div>
 </div>
-<div class="mb-6">
-<div class="relative">
-<i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-<input type="text" id="category-search" onkeyup="filterCategories()" placeholder="Kateqoriya axtar..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200">
+<div class="mb-4">
+<input type="text" id="category-search" onkeyup="filterCategories()" placeholder="🔍 Kateqoriya axtar..." class="w-full px-4 py-3 rounded-xl border border-gray-200">
 </div>
+
+<!-- PARENT CATEGORIES -->
+<div class="bg-white rounded-2xl p-5 shadow-sm mb-6">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-lg font-bold text-gray-800">📁 Əsas Kateqoriyalar</h4>
+<span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">sürükləyərək sıralayın</span>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="categories-grid"></div>
+<div id="parent-cats-list" class="space-y-2"></div>
+</div>
+
+<!-- SUB CATEGORIES -->
+<div class="bg-white rounded-2xl p-5 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-lg font-bold text-gray-800">📂 Alt Kateqoriyalar</h4>
+<span class="text-xs text-gray-400 bg-amber-50 text-amber-600 px-2 py-1 rounded">sürükləyərək sıralayın</span>
+</div>
+<div id="sub-cats-list" class="space-y-2"></div>
+</div>
 </div>
 
 <!-- PRODUCTS -->
@@ -369,6 +390,27 @@ Daxil ol
 </div>
 
 <!-- SETTINGS -->
+<!-- REVIEWS PAGE -->
+<div id="page-reviews" class="page-content hidden fade-in">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-2xl font-bold text-gray-800">Rəylər</h3>
+<p class="text-sm text-gray-500 mt-1"><span id="review-count">0</span> rəy</p>
+</div>
+<div class="flex gap-2">
+<select id="review-filter-stars" onchange="renderReviews()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+<option value="">Bütün reytinqlər</option>
+<option value="5">⭐⭐⭐⭐⭐ 5 ulduz</option>
+<option value="4">⭐⭐⭐⭐ 4 ulduz</option>
+<option value="3">⭐⭐⭐ 3 ulduz</option>
+<option value="2">⭐⭐ 2 ulduz</option>
+<option value="1">⭐ 1 ulduz</option>
+</select>
+</div>
+</div>
+<div id="reviews-list" class="space-y-4"></div>
+</div>
+
 <div id="page-settings" class="page-content hidden fade-in">
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-amber-100">
@@ -686,21 +728,54 @@ Hələ banner əlavə edilməyib.
 <button onclick="closeBannerAddModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
 </div>
 <div class="p-6 space-y-5">
+
+<!-- MODE TOGGLE -->
+<div class="flex gap-2 bg-gray-100 p-1 rounded-xl">
+<button id="bnr-mode-prod" onclick="setBannerMode('product')" class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-white shadow text-gray-800">📋 Məhsuldan seç</button>
+<button id="bnr-mode-custom" onclick="setBannerMode('custom')" class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-500">✏️ Əl ilə daxil et</button>
+</div>
+
+<!-- PRODUCT MODE -->
+<div id="bnr-product-mode">
+<label class="block text-sm font-medium text-gray-700 mb-2">Məhsul seçin *</label>
+<div class="relative">
+<input type="text" id="bnr-prod-search" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="🔍 Məhsul adı ilə axtar..." oninput="filterBnrProducts(this.value)" onfocus="showBnrDropdown()">
+<div id="bnr-prod-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-56 overflow-y-auto">
+</div>
+</div>
+<!-- Selected product preview -->
+<div id="bnr-selected-prod" class="hidden mt-3 p-3 bg-sky-50 border border-sky-200 rounded-xl flex items-center gap-3">
+<img id="bnr-sel-img" src="" class="w-14 h-14 rounded-lg object-cover flex-shrink-0" alt="">
+<div class="flex-1 min-w-0">
+<div id="bnr-sel-name" class="font-semibold text-gray-800 text-sm truncate"></div>
+<div id="bnr-sel-price" class="text-sky-700 font-bold text-sm mt-1"></div>
+<div class="text-xs text-gray-400 mt-0.5">❤️ <span id="bnr-sel-likes">0</span> bəyənmə</div>
+</div>
+<button onclick="clearBnrSelection()" class="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"><i class="fas fa-times"></i></button>
+</div>
+<input type="hidden" id="bnr-prod-id">
+</div>
+
+<!-- CUSTOM MODE -->
+<div id="bnr-custom-mode" class="hidden space-y-4">
 <div>
-<label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı <span class="text-gray-400 text-xs">(menyuda göstəriləcək)</span></label>
+<label class="block text-sm font-medium text-gray-700 mb-2">Yeməyin adı</label>
 <input type="text" id="bnr-name" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məs: Lülə kabab">
 </div>
 <div>
-<label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼) <span class="text-gray-400 text-xs">(bannerdə göstəriləcək)</span></label>
+<label class="block text-sm font-medium text-gray-700 mb-2">Qiymət (₼)</label>
 <input type="number" id="bnr-price" step="0.01" min="0" class="w-full px-4 py-3 rounded-lg border border-gray-200" placeholder="Məs: 12.50">
 </div>
+</div>
+
+<!-- IMAGE (both modes) -->
 <div>
-<label class="block text-sm font-medium text-gray-700 mb-2">Şəkil *</label>
+<label class="block text-sm font-medium text-gray-700 mb-2">Şəkil <span id="bnr-img-lbl" class="text-gray-400 text-xs">(məhsulun şəkli avtomatik götürülür, dəyişmək istəsəniz seçin)</span></label>
 <div class="w-full h-40 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer" onclick="document.getElementById('bnr-img-input').click()" id="bnr-img-preview-wrap">
 <img id="bnr-img-preview" src="" class="w-full h-full object-cover hidden" alt="">
 <div id="bnr-img-placeholder" class="text-center text-gray-400">
 <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
-<div class="text-sm">Şəkil seçin</div>
+<div class="text-sm">Şəkil seçin (isteğe bağlı)</div>
 </div>
 </div>
 <input type="file" id="bnr-img-input" class="hidden" accept="image/*" onchange="onBnrImgSelect(this)">
@@ -709,6 +784,7 @@ Hələ banner əlavə edilməyib.
 <div class="progress-bar"><div class="progress-bar-fill" id="bnr-img-pfill" style="width:0%"></div></div>
 </div>
 </div>
+
 </div>
 <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
 <button onclick="closeBannerAddModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">Ləğv et</button>
@@ -1086,7 +1162,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx2ZjVuv-IQ0H50AosY_XzwFFOxtcq9ZOyNovKflCY-wVPLe6bg7kqSsFCQiul4HQxJbA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxUm5JyEX0Ter24-0p74tJg01tBNBIs8T4Ohg8mwJPqMRnD74viCuD8w5eFtc2sW6eZRg/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1102,6 +1178,7 @@ let tables = JSON.parse(localStorage.getItem('tables') || '[]');
 let reservations = JSON.parse(localStorage.getItem('reservations') || '[]');
 let settings = JSON.parse(localStorage.getItem('settings') || '{}');
 let currentProductImages = [];
+let reviews = JSON.parse(localStorage.getItem('reviews') || '[]');
 let currentProductVideo = '';
 let editingProductId = null;
 let editingCategoryId = null;
@@ -1147,6 +1224,7 @@ function showSyncBadge() {
 function safeNumber(value, fallback = 0) { const n = Number(value); return isNaN(n) ? fallback : n; }
 function saveLocalState() {
   localStorage.setItem('categories', JSON.stringify(categories));
+  localStorage.setItem('reviews', JSON.stringify(reviews));
   localStorage.setItem('products', JSON.stringify(products));
   localStorage.setItem('orders', JSON.stringify(orders));
   localStorage.setItem('tables', JSON.stringify(tables));
@@ -1411,6 +1489,7 @@ async function loadInitialDataFromServer() {
     const raw = await response.json();
     const data = normalizeServerPayload(raw);
     categories = data.categories;
+    if (Array.isArray(data.reviews)) { reviews = data.reviews; localStorage.setItem('reviews', JSON.stringify(reviews)); }
     products = data.products;
     orders = data.orders;
     tables = data.tables;
@@ -1465,6 +1544,7 @@ function showPage(pageName) {
   const titles = {
     dashboard: ['Dashboard', 'Restoranınızın ümumi vəziyyəti'],
     categories: ['Kateqoriyalar', 'Menyu kateqoriyalarını idarə edin'],
+    reviews: ['Rəylər', 'Müştəri rəylərini idarə edin'],
     products: ['Menyu Məhsulları', 'Məhsulları əlavə edin və redaktə edin'],
     tables: ['Masalar', 'Masa və QR kodları idarə edin'],
     reservations: ['Rezervasiyalar', 'Rezervasiyaları idarə edin'],
@@ -1474,6 +1554,7 @@ function showPage(pageName) {
   document.getElementById('page-subtitle').textContent = titles[pageName][1];
   if (pageName === 'dashboard') { setTimeout(initCharts, 80); updateDashboard(); }
   else if (pageName === 'categories') renderCategories();
+  else if (pageName === 'reviews') renderReviews();
   else if (pageName === 'products') { renderProducts(); updateCategoryFilter(); }
   else if (pageName === 'tables') renderTables();
   else if (pageName === 'reservations') renderReservations();
@@ -1554,44 +1635,76 @@ async function saveCategory() {
   debouncedSync();
 }
 function renderCategories() {
-  const grid = document.getElementById('categories-grid');
   const search = (document.getElementById('category-search')?.value || '').toLowerCase();
   const filtered = [...categories].sort((a, b) => safeNumber(a.sortOrder, 0) - safeNumber(b.sortOrder, 0))
-    .filter(c => (c.nameAz || '').toLowerCase().includes(search) || (c.nameEn || '').toLowerCase().includes(search));
-  document.getElementById('category-count').textContent = filtered.length;
-  if (!filtered.length) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>'; return; }
-  // Show parent cats first, then sub-cats with indent
+    .filter(c => !search || (c.nameAz || '').toLowerCase().includes(search) || (c.nameEn || '').toLowerCase().includes(search));
+  document.getElementById('category-count').textContent = categories.length;
   const parentCats = filtered.filter(c => !c.parentCategoryId);
   const subCats = filtered.filter(c => c.parentCategoryId);
-  let html = '';
-  parentCats.forEach(cat => {
-    html += `<div class="bg-white rounded-2xl p-6 shadow-sm card-hover group cursor-pointer" onclick="openCategoryModal(${cat.id})">
-      <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-2xl">${cat.icon || '🍽️'}</div>
-      <h4 class="font-semibold text-gray-800 mb-1">${escapeHtml(cat.nameAz)}</h4>
-      <p class="text-xs text-gray-500 mb-1">${escapeHtml(cat.nameEn || '')}</p>
-      <div class="flex items-center justify-between mt-3">
-        <span class="status-badge bg-green-100 text-green-700">Əsas</span>
-        <span class="text-xs text-gray-400">Sıra: ${safeNumber(cat.sortOrder, 0)}</span>
+  
+  const pl = document.getElementById('parent-cats-list');
+  const sl = document.getElementById('sub-cats-list');
+  if (!pl || !sl) return;
+  
+  function catRow(cat, isSub) {
+    return `<div class="cat-row flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group" data-id="${cat.id}" draggable="true" ondragstart="dragCatStart(event,'${isSub?'sub':'parent'}')" ondragover="dragCatOver(event)" ondrop="dropCat(event,'${isSub?'sub':'parent'}')" ondragleave="dragCatLeave(event)">
+      <i class="fas fa-grip-vertical text-gray-300 cursor-grab flex-shrink-0"></i>
+      <div class="text-xl flex-shrink-0">${cat.icon||'🍽️'}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-gray-800 text-sm truncate">${escapeHtml(cat.nameAz)}</div>
+        <div class="text-xs text-gray-400 truncate">${escapeHtml(cat.nameEn||'')}${isSub&&cat.parentCategoryId?'  ↳ '+escapeHtml((categories.find(p=>String(p.id)===String(cat.parentCategoryId))?.nameAz)||''):''}</div>
+      </div>
+      <div class="flex items-center gap-1 ml-auto flex-shrink-0">
+        <span class="text-xs bg-${isSub?'amber':'green'}-100 text-${isSub?'amber':'green'}-700 px-2 py-0.5 rounded">${isSub?'Alt':'Əsas'}</span>
+        <button onclick="event.stopPropagation();openCategoryModal(${cat.id})" class="p-1.5 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-blue-600 text-xs"><i class="fas fa-edit"></i></button>
+        <button onclick="event.stopPropagation();deleteCategory(${cat.id})" class="p-1.5 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
       </div>
     </div>`;
-    // Sub-cats of this parent
-    subCats.filter(s => String(s.parentCategoryId) === String(cat.id)).forEach(sub => {
-      html += `<div class="bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer border-l-4 border-amber-400" onclick="openCategoryModal(${sub.id})">
-        <div class="flex items-center gap-3 mb-2"><span class="text-xs text-amber-600 font-semibold">↳ Alt</span><span class="text-xl">${sub.icon || '🍽️'}</span></div>
-        <h4 class="font-semibold text-gray-800 text-sm mb-1">${escapeHtml(sub.nameAz)}</h4>
-        <p class="text-xs text-gray-500">${escapeHtml(sub.nameEn || '')}</p>
-        <div class="flex items-center justify-between mt-2"><span class="text-xs text-amber-600">↳ ${escapeHtml(cat.nameAz)}</span><span class="text-xs text-gray-400">Sıra: ${safeNumber(sub.sortOrder, 0)}</span></div>
-      </div>`;
-    });
+  }
+  
+  pl.innerHTML = parentCats.length ? parentCats.map(c=>catRow(c,false)).join('') : '<div class="text-center py-6 text-gray-400 text-sm">Əsas kateqoriya yoxdur</div>';
+  sl.innerHTML = subCats.length ? subCats.map(c=>catRow(c,true)).join('') : '<div class="text-center py-6 text-gray-400 text-sm">Alt kateqoriya yoxdur</div>';
+}
+
+// Drag-sort categories
+let dragCatId = null, dragCatType = null;
+function dragCatStart(e, type) {
+  dragCatId = e.currentTarget.dataset.id;
+  dragCatType = type;
+  e.currentTarget.style.opacity = '0.5';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragCatOver(e) { e.preventDefault(); e.currentTarget.style.background = '#fef3cd'; return false; }
+function dragCatLeave(e) { e.currentTarget.style.background = ''; }
+function dropCat(e, type) {
+  e.preventDefault();
+  const targetId = e.currentTarget.dataset.id;
+  e.currentTarget.style.background = '';
+  if (!dragCatId || dragCatId === targetId) return;
+  const catList = type === 'parent' ? categories.filter(c=>!c.parentCategoryId) : categories.filter(c=>!!c.parentCategoryId);
+  const srcIdx = catList.findIndex(c=>String(c.id)===String(dragCatId));
+  const tgtIdx = catList.findIndex(c=>String(c.id)===String(targetId));
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  const sorted = [...catList];
+  const [moved] = sorted.splice(srcIdx, 1);
+  sorted.splice(tgtIdx, 0, moved);
+  sorted.forEach((c, i) => {
+    const cat = categories.find(x=>String(x.id)===String(c.id));
+    if (cat) cat.sortOrder = i;
   });
-  // Orphan sub-cats (parent not found)
-  subCats.filter(s => !parentCats.find(p => String(p.id) === String(s.parentCategoryId))).forEach(sub => {
-    html += `<div class="bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer border-l-4 border-gray-300" onclick="openCategoryModal(${sub.id})">
-      <span class="text-xs text-gray-500">↳ Alt</span>
-      <h4 class="font-semibold text-gray-800 text-sm">${escapeHtml(sub.nameAz)}</h4>
-    </div>`;
-  });
-  grid.innerHTML = html || '<div class="col-span-full text-center py-12 text-gray-500">Kateqoriya tapılmadı</div>';
+  document.querySelectorAll('.cat-row').forEach(r=>r.style.opacity='');
+  saveLocalState(); renderCategories(); debouncedSync();
+}
+
+function deleteCategory(id) {
+  if (!confirm('Bu kateqoriyanı silmək istəyirsiniz?')) return;
+  categories = categories.filter(c => Number(c.id) !== Number(id));
+  saveLocalState(); renderCategories(); updateCategoryFilter(); updateStats(); updateDashboard(); debouncedSync();
+}
+function deleteAllCategories() {
+  if (!confirm('BÜTÜN kateqoriyalar silinəcək. Əminsiniz?')) return;
+  categories = [];
+  saveLocalState(); renderCategories(); updateCategoryFilter(); updateStats(); updateDashboard(); debouncedSync();
 }
 function filterCategories() { renderCategories(); }
 function updateCategoryFilter() {
@@ -1759,7 +1872,6 @@ function openProductModal(productId = null) {
       document.getElementById('prod-new').checked = !!product.isNew;
       document.getElementById('prod-recommended').checked = !!product.recommended;
       document.getElementById('prod-available').checked = product.available !== false;
-      if (product.videoUrl) { document.getElementById('prod-video-url').value = product.videoUrl; currentProductVideo = product.videoUrl; updateVideoPreview(); }
       document.getElementById('prod-ingred-az').value = product.ingredientsAz || '';
       document.getElementById('prod-ingred-en').value = product.ingredientsEn || '';
       if (product.gifUrl) {
@@ -1832,7 +1944,7 @@ async function saveProduct() {
   const categoryId = safeNumber(document.getElementById('prod-category').value, 0);
   const price = safeNumber(document.getElementById('prod-price').value, 0);
   const available = document.getElementById('prod-available').checked;
-  const videoUrl = document.getElementById('prod-video-url').value.trim();
+  const videoUrl = '';
 
   if (!nameAz || !categoryId || !price) { alert('Vacib xanaları doldurun (Yeməyin adı, Kateqoriya, Qiymət)'); return; }
 
@@ -2257,8 +2369,24 @@ function updateBannerField(id, field, value) {
 }
 
 let bnrTmpBase64 = null;
+let bnrMode = 'product'; // 'product' | 'custom'
+let bnrSelectedProd = null;
+
+function setBannerMode(mode) {
+  bnrMode = mode;
+  document.getElementById('bnr-product-mode').classList.toggle('hidden', mode !== 'product');
+  document.getElementById('bnr-custom-mode').classList.toggle('hidden', mode !== 'custom');
+  document.getElementById('bnr-mode-prod').className = 'flex-1 px-3 py-2 rounded-lg text-sm font-semibold ' + (mode==='product' ? 'bg-white shadow text-gray-800' : 'text-gray-500');
+  document.getElementById('bnr-mode-custom').className = 'flex-1 px-3 py-2 rounded-lg text-sm font-semibold ' + (mode==='custom' ? 'bg-white shadow text-gray-800' : 'text-gray-500');
+}
+
 function openBannerAddModal() {
   bnrTmpBase64 = null;
+  bnrSelectedProd = null;
+  bnrMode = 'product';
+  // Reset UI
+  document.getElementById('bnr-prod-search').value = '';
+  document.getElementById('bnr-prod-id').value = '';
   document.getElementById('bnr-name').value = '';
   document.getElementById('bnr-price').value = '';
   document.getElementById('bnr-img-preview').src = '';
@@ -2266,9 +2394,92 @@ function openBannerAddModal() {
   document.getElementById('bnr-img-placeholder').classList.remove('hidden');
   document.getElementById('bnr-img-progress').classList.add('hidden');
   document.getElementById('bnr-img-input').value = '';
+  document.getElementById('bnr-selected-prod').classList.add('hidden');
+  document.getElementById('bnr-prod-dropdown').classList.add('hidden');
+  setBannerMode('product');
+  populateBnrDropdown(products);
   document.getElementById('banner-add-modal').classList.add('active');
 }
-function closeBannerAddModal() { document.getElementById('banner-add-modal').classList.remove('active'); bnrTmpBase64 = null; }
+
+function closeBannerAddModal() { 
+  document.getElementById('banner-add-modal').classList.remove('active'); 
+  bnrTmpBase64 = null; 
+  bnrSelectedProd = null;
+  document.getElementById('bnr-prod-dropdown').classList.add('hidden');
+}
+
+function populateBnrDropdown(prods) {
+  const dd = document.getElementById('bnr-prod-dropdown');
+  if (!prods || !prods.length) { dd.innerHTML = '<div class="p-3 text-gray-400 text-sm">Məhsul tapılmadı</div>'; return; }
+  dd.innerHTML = prods.map(p => {
+    const img = p.images && p.images[0] ? normalizeDriveFileUrl(p.images[0]) : '';
+    const likeCount = 0; // will be 0 in admin for now
+    const cat = categories.find(c => Number(c.id) === Number(p.categoryId));
+    return `<div class="flex items-center gap-3 px-3 py-2.5 hover:bg-sky-50 cursor-pointer border-b border-gray-100 last:border-0" onclick="selectBnrProduct(${JSON.stringify(p.id)})">
+      ${img ? `<img src="${img}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>'}
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-gray-800 text-sm truncate">${escapeHtml(p.nameAz || '')}</div>
+        <div class="text-xs text-gray-400">${cat ? escapeHtml(cat.nameAz) : ''} · ${p.price ? p.price+' ₼' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showBnrDropdown() {
+  const dd = document.getElementById('bnr-prod-dropdown');
+  const q = document.getElementById('bnr-prod-search').value.trim().toLowerCase();
+  const filtered = q ? products.filter(p => (p.nameAz||'').toLowerCase().includes(q) || (p.nameEn||'').toLowerCase().includes(q)) : products;
+  populateBnrDropdown(filtered);
+  dd.classList.remove('hidden');
+}
+
+function filterBnrProducts(q) {
+  const filtered = q ? products.filter(p => (p.nameAz||'').toLowerCase().includes(q.toLowerCase()) || (p.nameEn||'').toLowerCase().includes(q.toLowerCase())) : products;
+  populateBnrDropdown(filtered);
+  document.getElementById('bnr-prod-dropdown').classList.remove('hidden');
+}
+
+function selectBnrProduct(id) {
+  const p = products.find(pr => Number(pr.id) === Number(id));
+  if (!p) return;
+  bnrSelectedProd = p;
+  document.getElementById('bnr-prod-id').value = p.id;
+  document.getElementById('bnr-prod-search').value = p.nameAz || '';
+  document.getElementById('bnr-prod-dropdown').classList.add('hidden');
+  // Show selected preview
+  const preview = document.getElementById('bnr-selected-prod');
+  preview.classList.remove('hidden');
+  document.getElementById('bnr-sel-name').textContent = p.nameAz || '';
+  document.getElementById('bnr-sel-price').textContent = p.price ? p.price + ' ₼' : '';
+  // Show product image in banner preview if no custom image chosen
+  if (!bnrTmpBase64 && p.images && p.images[0]) {
+    const imgUrl = normalizeDriveFileUrl(p.images[0]);
+    document.getElementById('bnr-img-preview').src = imgUrl;
+    document.getElementById('bnr-img-preview').classList.remove('hidden');
+    document.getElementById('bnr-img-placeholder').classList.add('hidden');
+  }
+}
+
+function clearBnrSelection() {
+  bnrSelectedProd = null;
+  document.getElementById('bnr-prod-id').value = '';
+  document.getElementById('bnr-prod-search').value = '';
+  document.getElementById('bnr-selected-prod').classList.add('hidden');
+  if (!bnrTmpBase64) {
+    document.getElementById('bnr-img-preview').src = '';
+    document.getElementById('bnr-img-preview').classList.add('hidden');
+    document.getElementById('bnr-img-placeholder').classList.remove('hidden');
+  }
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#bnr-prod-search') && !e.target.closest('#bnr-prod-dropdown')) {
+    const dd = document.getElementById('bnr-prod-dropdown');
+    if (dd) dd.classList.add('hidden');
+  }
+});
+
 function onBnrImgSelect(input) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -2280,21 +2491,53 @@ function onBnrImgSelect(input) {
   };
   reader.readAsDataURL(file);
 }
+
 async function saveBannerItem() {
-  const name = document.getElementById('bnr-name').value.trim();
-  const price = document.getElementById('bnr-price').value.trim();
-  if (!bnrTmpBase64) { alert('Zəhmət olmasa şəkil seçin'); return; }
-  document.getElementById('bnr-img-progress').classList.remove('hidden');
-  document.getElementById('bnr-img-pfill').style.width = '30%';
-  document.getElementById('bnr-img-pct').textContent = '30%';
-  const uploadedUrl = await uploadImageToDrive(bnrTmpBase64, 'banner_' + Date.now() + '.jpg');
-  document.getElementById('bnr-img-pfill').style.width = '100%';
-  document.getElementById('bnr-img-pct').textContent = '100%';
-  if (!uploadedUrl) { alert('Şəkil yüklənmədi!'); document.getElementById('bnr-img-progress').classList.add('hidden'); return; }
-  bannerImages.push({ id: Date.now(), image: uploadedUrl, productName: name, title: name, price: price, active: true });
-  renderBannerList(); autoSaveSettings();
+  let name = '', price = '', imageUrl = '';
+  
+  if (bnrMode === 'product') {
+    if (!bnrSelectedProd) { alert('Zəhmət olmasa məhsul seçin'); return; }
+    name = bnrSelectedProd.nameAz || '';
+    price = bnrSelectedProd.price ? String(bnrSelectedProd.price) : '';
+    // Use product image if no custom image uploaded
+    if (!bnrTmpBase64 && bnrSelectedProd.images && bnrSelectedProd.images[0]) {
+      imageUrl = normalizeDriveFileUrl(bnrSelectedProd.images[0]);
+    }
+  } else {
+    name = document.getElementById('bnr-name').value.trim();
+    price = document.getElementById('bnr-price').value.trim();
+  }
+  
+  // Upload custom image if selected
+  if (bnrTmpBase64) {
+    document.getElementById('bnr-img-progress').classList.remove('hidden');
+    document.getElementById('bnr-img-pfill').style.width = '30%';
+    document.getElementById('bnr-img-pct').textContent = '30%';
+    const uploadedUrl = await uploadImageToDrive(bnrTmpBase64, 'banner_' + Date.now() + '.jpg');
+    document.getElementById('bnr-img-pfill').style.width = '100%';
+    document.getElementById('bnr-img-pct').textContent = '100%';
+    document.getElementById('bnr-img-progress').classList.add('hidden');
+    if (!uploadedUrl) { alert('Şəkil yüklənmədi!'); return; }
+    imageUrl = uploadedUrl;
+  }
+  
+  if (!imageUrl) { alert('Şəkil tələb olunur'); return; }
+  
+  const entry = { 
+    id: Date.now(), 
+    image: imageUrl, 
+    productName: name, 
+    title: name, 
+    price: price, 
+    active: true,
+    productId: bnrSelectedProd ? String(bnrSelectedProd.id) : ''
+  };
+  bannerImages.push(entry);
+  renderBannerList(); 
+  autoSaveSettings();
   closeBannerAddModal();
-  toast && toast('Banner əlavə edildi!');
+  showSyncIndicator('Banner əlavə edildi!', 'success');
+  setTimeout(hideSyncIndicator, 1200);
 }
 function handleBannerFileQuick(input) {
   // quick single-file add without modal (fallback)
@@ -2401,6 +2644,45 @@ function loadSettings() {
   setChk('review-enabled', s.reviewEnabled, true);
   set('review-title', s.reviewTitle || 'Bizə daha yaxşı olmağa kömək et!');
   set('review-link', s.reviewLink || '');
+}
+
+
+// ============================================
+// REVIEWS
+// ============================================
+function renderReviews() {
+  const list = document.getElementById('reviews-list');
+  if (!list) return;
+  const filterStars = document.getElementById('review-filter-stars')?.value || '';
+  let filtered = [...reviews].sort((a,b)=>new Date(b.createdAt||b.date||0)-new Date(a.createdAt||a.date||0));
+  if (filterStars) filtered = filtered.filter(r => r.itemsRating >= Number(filterStars) || r.serviceRating >= Number(filterStars));
+  const cnt = document.getElementById('review-count');
+  if (cnt) cnt.textContent = filtered.length;
+  if (!filtered.length) { list.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-star text-3xl mb-3 block"></i>Hələ rəy yoxdur</div>'; return; }
+  
+  function stars(n) { return Array.from({length:5},(_,i)=>`<span style="color:${i<n?'#b5964a':'#ddd'};font-size:14px;">★</span>`).join(''); }
+  
+  list.innerHTML = filtered.map(r => `
+  <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-bold">${(r.name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div class="font-semibold text-gray-800 text-sm">${escapeHtml(r.name||'Anonim')}</div>
+          <div class="text-xs text-gray-400">${(r.createdAt||r.date||'').split('T')[0]||''}</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-gray-500 mb-1">Maddə: ${stars(r.itemsRating||0)}</div>
+        <div class="text-xs text-gray-500">Xidmət: ${stars(r.serviceRating||0)}</div>
+      </div>
+    </div>
+    ${r.comment?`<div class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 mb-2">"${escapeHtml(r.comment)}"</div>`:''}
+    <div class="flex gap-4 text-xs text-gray-400 mt-2">
+      ${r.phone?`<span><i class="fas fa-phone mr-1"></i>${escapeHtml(r.phone)}</span>`:''}
+      ${r.email?`<span><i class="fas fa-envelope mr-1"></i>${escapeHtml(r.email)}</span>`:''}
+    </div>
+  </div>`).join('');
 }
 
 // ============================================
