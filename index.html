@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>QR Menyu Admin Panel</title>
-<link href="tailwind.css" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
@@ -1162,7 +1162,7 @@ Brauzeriniz video tag-ni dəstəkləmir.
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw1iJenqzaN2Lg7JzV6W8vnFDfAIAmR1tPi7xHu5U4IkJNbleLLrMwWx8PQ4b3T1mrgmw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6OY_7s_OJp-G3bQDzdgsJrlGK7uJso7-1zP9YFl8NVEpVBMA_UuXo1xTDcmomY65UiQ/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1372,26 +1372,33 @@ async function parseAppsScriptResponse(response) {
   try { return JSON.parse(raw); } catch { throw new Error(raw || `HTTP ${response.status}`); }
 }
 
-async function postAppsScript(action, payload = {}) {
+async function postAppsScript(action, payload = {}, signal = null) {
   const jsonPayload = { action, ...payload };
+  const fetchOpts = {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(jsonPayload)
+  };
+  if (signal) fetchOpts.signal = signal;
   try {
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(jsonPayload)
-    });
+    const response = await fetch(CONFIG.GAS_URL, fetchOpts);
     return await parseAppsScriptResponse(response);
-  } catch (err) { console.log('text/plain POST failed, trying form-encoded...', err); }
+  } catch (err) { 
+    if (err.name === 'AbortError') throw err;
+    console.log('text/plain POST failed, trying form-encoded...', err); 
+  }
   const formPayload = new URLSearchParams();
   formPayload.append('action', action);
   Object.entries(payload).forEach(([key, value]) => {
     formPayload.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
   });
-  const response = await fetch(CONFIG.GAS_URL, {
+  const fetchOpts2 = {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formPayload.toString()
-  });
+  };
+  if (signal) fetchOpts2.signal = signal;
+  const response = await fetch(CONFIG.GAS_URL, fetchOpts2);
   return await parseAppsScriptResponse(response);
 }
 
@@ -1762,23 +1769,16 @@ function updateVideoPreview() {
   const videoUrl = '';
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
-  if (!videoUrl) {
-    if (previewContainer) previewContainer.classList.add('hidden');
-    return;
-  }
-  if (!previewContainer) return;
-  if (videoPlayer) {
-    videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-    videoPlayer.load();
-  }
+  if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
+  videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  videoPlayer.load();
   previewContainer.classList.remove('hidden');
 }
 function clearVideo() {
   // video removed
   const fileInput = document.getElementById('prod-video-file');
   if (fileInput) fileInput.value = '';
-  const previewContainer = document.getElementById('video-preview-container');
-  if (previewContainer) previewContainer.classList.add('hidden');
+  document.getElementById('video-preview-container').classList.add('hidden');
   currentProductVideo = '';
 }
 
@@ -1859,8 +1859,8 @@ function openProductModal(productId = null) {
   document.getElementById('prod-category').value = '';
   document.getElementById('prod-time').value = '3min';
   // video removed
-  const _vpc = document.getElementById('video-preview-container');
-  if (_vpc) _vpc.classList.add('hidden');
+  // video removed
+  document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
   document.getElementById('prod-recommended').checked = false;
