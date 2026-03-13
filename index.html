@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>QR Menyu Admin Panel</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="tailwind.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
@@ -1769,6 +1769,7 @@ function updateVideoPreview() {
   const videoUrl = '';
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
+  if (!previewContainer || !videoPlayer) return;
   if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
   videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
   videoPlayer.load();
@@ -1778,7 +1779,8 @@ function clearVideo() {
   // video removed
   const fileInput = document.getElementById('prod-video-file');
   if (fileInput) fileInput.value = '';
-  document.getElementById('video-preview-container').classList.add('hidden');
+  const videoPreview = document.getElementById('video-preview-container');
+  if (videoPreview) videoPreview.classList.add('hidden');
   currentProductVideo = '';
 }
 
@@ -1860,7 +1862,8 @@ function openProductModal(productId = null) {
   document.getElementById('prod-time').value = '3min';
   // video removed
   // video removed
-  document.getElementById('video-preview-container').classList.add('hidden');
+  const videoPreviewContainer = document.getElementById('video-preview-container');
+  if (videoPreviewContainer) videoPreviewContainer.classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
   document.getElementById('prod-recommended').checked = false;
