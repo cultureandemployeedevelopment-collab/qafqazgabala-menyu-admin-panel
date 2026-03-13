@@ -1762,20 +1762,16 @@ function updateVideoPreview() {
   const videoUrl = '';
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
-  if (!previewContainer) return;
   if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
-  if (videoPlayer) {
-    videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-    videoPlayer.load();
-  }
+  videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  videoPlayer.load();
   previewContainer.classList.remove('hidden');
 }
 function clearVideo() {
   // video removed
   const fileInput = document.getElementById('prod-video-file');
   if (fileInput) fileInput.value = '';
-  const videoContainer = document.getElementById('video-preview-container');
-  if (videoContainer) videoContainer.classList.add('hidden');
+  document.getElementById('video-preview-container').classList.add('hidden');
   currentProductVideo = '';
 }
 
@@ -1856,8 +1852,8 @@ function openProductModal(productId = null) {
   document.getElementById('prod-category').value = '';
   document.getElementById('prod-time').value = '3min';
   // video removed
-  const videoPreviewContainer = document.getElementById('video-preview-container');
-  if (videoPreviewContainer) videoPreviewContainer.classList.add('hidden');
+  // video removed
+  document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
   document.getElementById('prod-recommended').checked = false;
