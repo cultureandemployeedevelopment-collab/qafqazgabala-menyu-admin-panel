@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>QR Menyu Admin Panel</title>
-<link rel="stylesheet" href="tailwind.css">
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
@@ -218,7 +218,7 @@ Daxil ol
 <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">A</div>
 <div class="flex-1 min-w-0">
 <p class="text-sm font-medium text-white truncate">Admin</p>
-<p class="text-xs text-gray-400 truncate">admin@qrmenu.az</p>
+<p class="text-xs text-gray-400 truncate"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ceafaaa3a7a08ebfbca3aba0bbe0afb4">[email&#160;protected]</a></p>
 </div>
 </div>
 <button onclick="logout()" class="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors w-full px-2">
@@ -1157,12 +1157,12 @@ Brauzeriniz video tag-ni dəstəkləmir.
 </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ============================================
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6OY_7s_OJp-G3bQDzdgsJrlGK7uJso7-1zP9YFl8NVEpVBMA_UuXo1xTDcmomY65UiQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwSilV66q636PS55d6cej4nvQrzUD5hujMW-dfMYChlvKT8xUENm1axTtt0owAc10kLPA/exec',
   DRIVE_FOLDER_ID: '1pEKDEeCzulPDaXCX2F218om1KSuAK5aN',
   AUTO_SYNC: true,
   SYNC_DELAY: 1000
@@ -1574,7 +1574,7 @@ function showPage(pageName) {
   document.getElementById('page-subtitle').textContent = titles[pageName][1];
   if (pageName === 'dashboard') { setTimeout(initCharts, 80); updateDashboard(); }
   else if (pageName === 'categories') renderCategories();
-  else if (pageName === 'reviews') renderReviews();
+  else if (pageName === 'reviews') { renderReviews(); loadReviewsFromServer(); }
   else if (pageName === 'products') { renderProducts(); updateCategoryFilter(); }
   else if (pageName === 'tables') renderTables();
   else if (pageName === 'reservations') renderReservations();
@@ -1769,16 +1769,16 @@ function updateVideoPreview() {
   const videoUrl = '';
   const previewContainer = document.getElementById('video-preview-container');
   const videoPlayer = document.getElementById('video-preview-player');
-  if (!videoUrl) { previewContainer?.classList.add('hidden'); return; }
-  if (videoPlayer) videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
-  if (videoPlayer) videoPlayer.load();
-  if (previewContainer) previewContainer.classList.remove('hidden');
+  if (!videoUrl) { previewContainer.classList.add('hidden'); return; }
+  videoPlayer.innerHTML = `<source src="${videoUrl}" type="video/mp4">`;
+  videoPlayer.load();
+  previewContainer.classList.remove('hidden');
 }
 function clearVideo() {
   // video removed
   const fileInput = document.getElementById('prod-video-file');
   if (fileInput) fileInput.value = '';
-  document.getElementById('video-preview-container')?.classList.add('hidden');
+  document.getElementById('video-preview-container').classList.add('hidden');
   currentProductVideo = '';
 }
 
@@ -1860,7 +1860,7 @@ function openProductModal(productId = null) {
   document.getElementById('prod-time').value = '3min';
   // video removed
   // video removed
-  document.getElementById('video-preview-container')?.classList.add('hidden');
+  document.getElementById('video-preview-container').classList.add('hidden');
   document.getElementById('prod-popular').checked = false;
   document.getElementById('prod-new').checked = false;
   document.getElementById('prod-recommended').checked = false;
@@ -2740,6 +2740,19 @@ function renderReviews() {
       ${r.email?`<span><i class="fas fa-envelope mr-1"></i>${escapeHtml(r.email)}</span>`:''}
     </div>
   </div>`).join('');
+}
+
+async function loadReviewsFromServer() {
+  try {
+    const res = await fetch(CONFIG.GAS_URL + '?action=getMenu&_=' + Date.now(), { cache: 'no-store' });
+    const json = await res.json();
+    const data = json.data || json;
+    if (Array.isArray(data.reviews) && data.reviews.length > 0) {
+      reviews = data.reviews;
+      localStorage.setItem('reviews', JSON.stringify(reviews));
+      renderReviews();
+    }
+  } catch(e) { console.warn('loadReviewsFromServer error:', e); }
 }
 
 // ============================================
