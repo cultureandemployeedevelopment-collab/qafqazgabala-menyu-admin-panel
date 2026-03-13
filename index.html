@@ -1805,6 +1805,7 @@ async function handleGifFileInput(input) {
     showSyncIndicator('GIF yükləndi!', 'success');
     setTimeout(hideSyncIndicator, 1200);
   };
+  reader.onerror = function() { hideSyncIndicator(); alert('GIF faylı oxunmadı.'); input.value = ''; };
   reader.readAsDataURL(file);
 }
 function clearGif() {
@@ -2048,11 +2049,10 @@ async function saveProduct() {
   if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Saxla'; }
   showSyncIndicator('Məhsul saxlandı!', 'success');
   setTimeout(hideSyncIndicator, 2000);
-  // Sync in background - don't block UI
-  immediateSync().catch(e => {
+  // Sync in background - don't block UI, don't show toast (avoids overriding success indicator)
+  clearTimeout(syncTimeout);
+  syncToGoogleSheets(false).catch(e => {
     console.warn('Sync error (non-blocking):', e);
-    showSyncIndicator('Yerli yadda saxlandı', 'warning');
-    setTimeout(hideSyncIndicator, 2000);
   });
   } catch(saveErr) {
     console.error('saveProduct error:', saveErr);
