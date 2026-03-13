@@ -1503,9 +1503,12 @@ async function immediateSync() { clearTimeout(syncTimeout); await syncToGoogleSh
 async function manualSync() { await immediateSync(); }
 
 async function loadInitialDataFromServer() {
+  const ctrl = new AbortController();
+  const loadTimer = setTimeout(() => ctrl.abort(), 30000); // 30s timeout
   try {
     showSyncIndicator('Məlumatlar yüklənir...', 'loading');
-    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getMenu&_=${Date.now()}`, { cache: 'no-store', headers: { 'Accept': 'application/json' }, signal: ctrl.signal });
+    clearTimeout(loadTimer);
     const raw = await response.json();
     const data = normalizeServerPayload(raw);
     categories = data.categories;
@@ -1522,7 +1525,7 @@ async function loadInitialDataFromServer() {
     saveLocalState();
     hideSyncIndicator();
     initApp();
-  } catch (e) { console.error('Initial load error:', e); hideSyncIndicator(); initApp(); }
+  } catch (e) { clearTimeout(loadTimer); console.error('Initial load error:', e); hideSyncIndicator(); initApp(); }
 }
 
 // ============================================
